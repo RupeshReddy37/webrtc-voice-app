@@ -96,3 +96,61 @@ input {
 .btn-end { background: #ef4444; color: white; }
 
 .hidden { display: none !important; }
+
+/* ============================================================
+   Video Call Layout Additions
+   ============================================================ */
+
+/* Video Display Grid */
+.video-grid {
+    position: relative;
+    width: 100%;
+    height: 240px;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.remote-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.local-video {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 80px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+    background: #1e293b;
+}
+
+.nav-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.nav-btn {
+    color: #94a3b8;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-btn.active {
+    color: #fff;
+    background: #3b82f6;
+    font-weight: 600;
+}
+
+

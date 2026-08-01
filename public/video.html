@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Call - WebRTC</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📹</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="card video-card">
+        <!-- Navigation Header -->
+        <div class="nav-toggle">
+            <a href="index.html" class="nav-btn">🎧 Voice Call</a>
+            <a href="video.html" class="nav-btn active">📹 Video Call</a>
+        </div>
+
+        <h2>1-on-1 Video Call</h2>
+
+        <!-- Room Setup -->
+        <div class="input-group">
+            <input type="text" id="roomIdInput" placeholder="Enter Room ID (e.g. 101)" />
+            <button id="joinBtn" class="btn btn-primary">Join Room</button>
+        </div>
+
+        <!-- Live Video Display Grid -->
+        <div class="video-grid">
+            <video id="remoteVideo" autoplay playsinline class="remote-video"></video>
+            <video id="localVideo" autoplay playsinline muted class="local-video"></video>
+        </div>
+
+        <!-- Status Light & Text -->
+        <div class="status-container">
+            <div id="statusDot" class="status-dot idle"></div>
+            <span id="statusText">Disconnected</span>
+        </div>
+
+        <!-- Call Action Buttons -->
+        <div class="action-container">
+            <button id="dialBtn" class="btn btn-dial" disabled>📞 Dial Video Call</button>
+            <button id="answerBtn" class="btn btn-answer hidden">🟢 Answer Video Call</button>
+            <button id="endBtn" class="btn btn-end hidden">🔴 End Call</button>
+        </div>
+    </div>
+
+    <!-- Socket.io client script -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <!-- Main Video Controller -->
+    <script type="module" src="js/video-app.js"></script>
+</body>
+</html>
