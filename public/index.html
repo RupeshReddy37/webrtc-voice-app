@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice Call App</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📞</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="card">
+        <div id="toast-container"></div>
+
+        <header class="app-header">
+            <h1>Voice Call <span class="badge">WebRTC</span></h1>
+            <div id="network-status" class="network-status" aria-label="Network Status">
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            </div>
+        </header>
+
+        <!-- Room Input Section -->
+        <div id="roomSection" class="input-group">
+            <input type="text" id="roomIdInput" placeholder="Enter Room ID" aria-label="Room ID" />
+            <button id="joinBtn" class="btn btn-primary" aria-label="Join Room">
+                <span class="btn-text">Join</span>
+                <div class="spinner hidden"></div>
+            </button>
+            <button id="copyInviteBtn" class="btn btn-icon" aria-label="Copy Invite Link">✉️</button>
+        </div>
+
+        <!-- Status Indicator -->
+        <div class="status-container">
+            <div id="statusDot" class="status-dot idle"></div>
+            <span id="statusText">Disconnected</span>
+            <span id="callTimer" class="call-timer hidden">00:00</span>
+        </div>
+
+        <!-- Audio Visualizer -->
+        <div id="visualizer-container" class="visualizer-container hidden">
+            <div class="visualizer-bar"></div>
+            <div class="visualizer-bar"></div>
+            <div class="visualizer-bar"></div>
+            <div class="visualizer-bar"></div>
+            <div class="visualizer-bar"></div>
+        </div>
+
+        <!-- Call Action Buttons -->
+        <div class="action-container">
+            <!-- State 1: Idle -->
+            <button id="dialBtn" class="btn btn-dial" disabled aria-label="Dial Call">📞 Dial Call</button>
+            <!-- State 2: Incoming -->
+            <div id="incomingCallActions" class="hidden">
+                <button id="answerBtn" class="btn btn-answer" aria-label="Answer Call">🟢 Answer</button>
+                <button id="declineBtn" class="btn btn-end" aria-label="Decline Call">🔴 Decline</button>
+            </div>
+            <!-- State 3: Active -->
+            <button id="endBtn" class="btn btn-end hidden" aria-label="End Call">🔴 End Call</button>
+        </div>
+    </div>
+
+    <!-- Remote Audio Output Stream -->
+    <audio id="remoteAudio" autoplay></audio>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="js/toast.js"></script>
+    <script type="module" src="js/visualizer.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
