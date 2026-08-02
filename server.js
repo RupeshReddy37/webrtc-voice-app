@@ -1,5 +1,6 @@
 // server.js
-// 1-on-1 WebRTC voice calling app - Server logic
+// Production-ready 1-on-1 WebRTC Video Calling backend
+// Node.js + Express + Socket.io
 
 const express = require('express');
 const http = require('http');
@@ -15,11 +16,15 @@ app.use(express.static('public'));
 const server = http.createServer(app);
 
 // Attach Socket.io to the HTTP server
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 // Use process.env.PORT assigned by Render, or fallback to 3000 locally
 const PORT = process.env.PORT || 3000;
-
 
 // Track the number of participants in each room
 // roomId -> count of connected sockets
