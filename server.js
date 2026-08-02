@@ -1,6 +1,6 @@
 // server.js
-// Production-ready 1-on-1 WebRTC Video Calling backend
-// Node.js + Express + Socket.io
+// Standard Express/Socket.io server handling WebRTC signaling
+// (join, offer, answer, ice-candidate) for 1-on-1 calls.
 
 const express = require('express');
 const http = require('http');
@@ -35,7 +35,7 @@ io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
   // --- Room logic with strict 2-user capacity ---
-  socket.on('join-room', (roomId) => {
+  socket.on('join', (roomId) => {
     // Initialize room count if it doesn't exist
     if (!roomParticipants[roomId]) {
       roomParticipants[roomId] = 0;
@@ -86,7 +86,6 @@ io.on('connection', (socket) => {
     console.log(`User disconnected: ${socket.id}`);
 
     // Find which room this socket belonged to
-    // (iterate over rooms the socket was in)
     const rooms = Array.from(socket.rooms);
     // socket.rooms includes the socket's own id, so filter it out
     const joinedRooms = rooms.filter((room) => room !== socket.id);

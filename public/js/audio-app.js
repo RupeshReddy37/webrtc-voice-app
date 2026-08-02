@@ -1,5 +1,5 @@
-// public/js/video-app.js
-// Video WebRTC calling logic (video.html)
+// public/js/audio-app.js
+// Voice-only WebRTC calling logic (index.html)
 // Vanilla JS + Socket.io
 // Includes: strict init, waterfall ICE config, bulletproof ICE queue,
 // track bug fix, and ICE restart for network switching.
@@ -36,8 +36,6 @@ const roomIdInput = document.getElementById('roomIdInput');
 const joinBtn = document.getElementById('joinBtn');
 const dialBtn = document.getElementById('dialBtn');
 const statusText = document.getElementById('statusText');
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
 const voiceToggle = document.getElementById('voiceToggle');
 const videoToggle = document.getElementById('videoToggle');
 
@@ -116,48 +114,14 @@ function setConnectedUI(connected) {
         dialBtn.innerText = '📵 End Call';
     } else {
         setStatus('🔴 Disconnected');
-        dialBtn.innerText = '📹 Dial Video Call';
-    }
-}
-
-// ============================================================
-// TRACK BUG FIX
-// ontrack fires once per track (audio AND video). We must attach
-// the stream to the video element whenever it's a NEW stream,
-// regardless of which track arrives first. The AbortError from
-// .play() is handled gracefully without blocking track assignment.
-// ============================================================
-function handleRemoteStream(stream) {
-    console.log("Remote stream received:", stream);
-
-    // Standard logic: only re-assign if this is a DIFFERENT stream.
-    // This handles both the audio track and the video track arriving
-    // on the same stream object without swallowing either one.
-    if (remoteVideo.srcObject !== stream) {
-        remoteVideo.srcObject = stream;
-    }
-
-    // Force playback and handle browser autoplay policy blocks.
-    // AbortError (play interrupted by a new load) is harmless and ignored.
-    const playPromise = remoteVideo.play();
-    if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-            if (error.name === 'AbortError') {
-                console.warn("Playback interrupted (AbortError) - ignoring.");
-                return;
-            }
-            console.warn("Autoplay blocked. Retrying muted playback:", error);
-            remoteVideo.muted = true;
-            remoteVideo.play();
-        });
+        dialBtn.innerText = '📞 Dial Call';
     }
 }
 
 // ============================================================
 // STRICT INITIALIZATION SEQUENCE
-// getUserMedia -> attach to DOM -> create RTCPeerConnection
-// -> add tracks -> emit offer. NEVER create the connection
-// before the local stream is fully loaded.
+// getUserMedia -> create RTCPeerConnection -> add tracks -> emit offer.
+// NEVER create the connection before the local stream is loaded.
 // ============================================================
 async function startCall() {
     if (!socket.connected) {
@@ -169,34 +133,24 @@ async function startCall() {
         return;
     }
 
-    setStatus('📹 Calling...');
+    setStatus('📞 Calling...');
 
-    // STEP 1: Await getUserMedia (audio + video)
+    // STEP 1: Await getUserMedia (audio only)
     localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }
+        video: false
     });
 
-    // STEP 2: Attach local stream to the DOM video element
-    localVideo.srcObject = localStream;
-
-    // STEP 3: Initialize RTCPeerConnection (only now, stream is ready)
+    // STEP 2: Initialize RTCPeerConnection (only now, stream is ready)
     peerConnection = new RTCPeerConnection(rtcConfig);
 
-    // STEP 4: Add local tracks to the peer connection
+    // STEP 3: Add local audio track to the peer connection
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
     // Handle ICE candidate discovery -> send to peer via socket
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             socket.emit('ice-candidate', { roomId: currentRoom, candidate: event.candidate });
-        }
-    };
-
-    // Handle incoming remote stream (with track bug fix)
-    peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-            handleRemoteStream(event.streams[0]);
         }
     };
 
@@ -213,7 +167,7 @@ async function startCall() {
         }
     };
 
-    // STEP 5: Create and emit the Offer
+    // STEP 4: Create and emit the Offer
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
     socket.emit('offer', { roomId: currentRoom, sdp: offer });
@@ -223,34 +177,24 @@ async function startCall() {
 // Answer an incoming call
 // ============================================================
 async function answerCall() {
-    setStatus('📹 Connecting...');
+    setStatus('📞 Connecting...');
 
-    // STEP 1: Await getUserMedia (audio + video)
+    // STEP 1: Await getUserMedia (audio only)
     localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }
+        video: false
     });
 
-    // STEP 2: Attach local stream to the DOM
-    localVideo.srcObject = localStream;
-
-    // STEP 3: Initialize RTCPeerConnection
+    // STEP 2: Initialize RTCPeerConnection
     peerConnection = new RTCPeerConnection(rtcConfig);
 
-    // STEP 4: Add local tracks
+    // STEP 3: Add local audio track
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
     // Handle ICE candidate discovery
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             socket.emit('ice-candidate', { roomId: currentRoom, candidate: event.candidate });
-        }
-    };
-
-    // Handle incoming remote stream (with track bug fix)
-    peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-            handleRemoteStream(event.streams[0]);
         }
     };
 
@@ -299,9 +243,6 @@ function endCall(emitHangup = true) {
     incomingOffer = null;
     iceCandidatesQueue = [];
 
-    localVideo.srcObject = null;
-    remoteVideo.srcObject = null;
-
     setConnectedUI(false);
 }
 
@@ -339,7 +280,7 @@ socket.on('peer-left', () => {
 socket.on('offer', async (data) => {
     // If a call is already active (peerConnection exists), this is an
     // ICE restart offer (network switch). Handle it seamlessly WITHOUT
-    // resetting the video elements or tearing down the media session.
+    // tearing down the media session.
     if (peerConnection && peerConnection.remoteDescription) {
         console.log("🔄 Received ICE restart offer. Applying new remote description...");
         try {
@@ -361,7 +302,7 @@ socket.on('offer', async (data) => {
 
     // Otherwise, this is a brand-new incoming call
     incomingOffer = data.sdp;
-    setStatus('📹 Incoming Call...');
+    setStatus('📞 Incoming Call...');
     answerCall();
 });
 
@@ -409,6 +350,6 @@ roomIdInput.addEventListener('keydown', (e) => {
 });
 
 // Navigation Toggle
-voiceToggle.addEventListener('click', () => {
-    window.location.href = 'index.html';
+videoToggle.addEventListener('click', () => {
+    window.location.href = 'video.html';
 });

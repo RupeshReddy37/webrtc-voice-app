@@ -3,48 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1-on-1 Video Call</title>
+    <title>Voice Call WebRTC</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>📹 1-on-1 Video Call</h1>
+    <div class="card">
+        <!-- Navigation Toggle -->
+        <div class="nav-toggle">
+            <button class="toggle-btn active" id="voiceToggle">🎧 Voice Call</button>
+            <button class="toggle-btn" id="videoToggle">📹 Video Call</button>
+        </div>
+
+        <!-- Voice Call Content -->
+        <h1>Voice Call WebRTC</h1>
 
         <!-- Room Join Controls -->
         <div class="controls">
             <input type="text" id="roomIdInput" placeholder="Enter Room ID" autocomplete="off">
-            <button id="joinBtn">Join Room</button>
+            <button id="joinBtn">Join</button>
         </div>
 
-        <!-- Call Controls -->
-        <div class="controls">
-            <button id="dialBtn" class="hidden" disabled>📞 Call</button>
-            <button id="answerBtn" class="hidden">✅ Answer</button>
-            <button id="endBtn" class="hidden">📵 End Call</button>
-        </div>
+        <!-- Status Text -->
+        <div class="status-text" id="statusText">🔴 Disconnected</div>
 
-        <!-- Status Indicator -->
-        <div class="status">
-            <span id="statusDot" class="status-dot idle"></span>
-            <span id="statusText">Enter a Room ID to begin</span>
-        </div>
-
-        <!-- Video Containers -->
-        <div class="video-container">
-            <div class="video-box">
-                <video id="localVideo" autoplay playsinline muted></video>
-                <div class="video-label">You</div>
-            </div>
-            <div class="video-box">
-                <video id="remoteVideo" autoplay playsinline></video>
-                <div class="video-label">Remote</div>
-            </div>
-        </div>
+        <!-- Dial Call Button -->
+        <button id="dialBtn" class="dial-btn" disabled>📞 Dial Call</button>
     </div>
 
     <!-- Socket.io client library -->
     <script src="/socket.io/socket.io.js"></script>
-    <!-- Client-side WebRTC logic -->
-    <script src="app.js"></script>
+    <!-- Voice WebRTC logic -->
+    <script src="js/audio-app.js"></script>
 </body>
 </html>
