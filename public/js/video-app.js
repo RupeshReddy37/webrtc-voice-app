@@ -23,8 +23,24 @@ let localStream = null;
 let incomingOffer = null;
 let iceCandidatesQueue = [];
 
+// This function frees the hostage candidates and injects them into the connection
+async function processIceCandidatesQueue() {
+    console.log(`Flushing ${iceCandidatesQueue.length} queued ICE candidates...`);
+    
+    while (iceCandidatesQueue.length > 0) {
+        const candidate = iceCandidatesQueue.shift();
+        try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log("✅ Successfully injected queued ICE candidate.");
+        } catch (error) {
+            console.error("❌ Error adding ICE candidate from queue:", error);
+        }
+    }
+}
+
 
 // Event Listeners
+
 joinBtn.addEventListener('click', joinRoom);
 dialBtn.addEventListener('click', startCall);
 answerBtn.addEventListener('click', answerCall);
@@ -67,26 +83,32 @@ socket.on('offer', (data) => {
 });
 
 socket.on('answer', async (data) => {
-    await WebRTCVideo.applyAnswer(peerConnection, data.sdp);
-    // Now that the remote description is set, flush any queued ICE candidates
-    while (iceCandidatesQueue.length > 0) {
-        const queuedCandidate = iceCandidatesQueue.shift();
-        await WebRTCVideo.applyIceCandidate(peerConnection, queuedCandidate);
-    }
+    console.log("Received Answer, setting remote description...");
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+    
+    // THE CRITICAL LINE: Flush the queue now that the description is set!
+    await processIceCandidatesQueue();
     setUIState('connected');
 });
 
 socket.on('ice-candidate', async (data) => {
-    console.log("📥 Received remote ICE candidate from socket!", data); // ADD THIS LINE
-
-    // If the connection is ready and remote description is set, apply immediately
+    console.log("📥 ICE Candidate arrived from socket:", data.candidate.candidate);
+    
+    // Check if the connection is ready to accept candidates
     if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
-        await WebRTCVideo.applyIceCandidate(peerConnection, data.candidate);
+        try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            console.log("✅ Injected ICE candidate directly.");
+        } catch(e) {
+            console.error("❌ Failed to inject direct candidate:", e);
+        }
     } else {
-        // Otherwise, hold it in the queue until Answer is processed
+        // Connection not ready yet, take it hostage in the queue
+        console.log("⏸️ Connection not ready. Queueing candidate.");
         iceCandidatesQueue.push(data.candidate);
     }
 });
+
 
 
 
