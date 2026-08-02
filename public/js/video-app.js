@@ -21,6 +21,8 @@ let currentRoom = null;
 let peerConnection = null;
 let localStream = null;
 let incomingOffer = null;
+let iceCandidatesQueue = [];
+
 
 // Event Listeners
 joinBtn.addEventListener('click', joinRoom);
@@ -66,12 +68,24 @@ socket.on('offer', (data) => {
 
 socket.on('answer', async (data) => {
     await WebRTCVideo.applyAnswer(peerConnection, data.sdp);
+    // Now that the remote description is set, flush any queued ICE candidates
+    while (iceCandidatesQueue.length > 0) {
+        const queuedCandidate = iceCandidatesQueue.shift();
+        await WebRTCVideo.applyIceCandidate(peerConnection, queuedCandidate);
+    }
     setUIState('connected');
 });
 
 socket.on('ice-candidate', async (data) => {
-    await WebRTCVideo.applyIceCandidate(peerConnection, data.candidate);
+    // If the connection is ready and remote description is set, apply immediately
+    if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+        await WebRTCVideo.applyIceCandidate(peerConnection, data.candidate);
+    } else {
+        // Otherwise, hold it in the queue until Answer is processed
+        iceCandidatesQueue.push(data.candidate);
+    }
 });
+
 
 socket.on('hangup', () => endCall(false));
 
