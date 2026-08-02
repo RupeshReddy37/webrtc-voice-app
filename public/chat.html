@@ -32,11 +32,12 @@
             <!-- Scrollable message history -->
             <div class="chat-messages" id="chatMessages"></div>
 
-            <!-- Message input + Send button -->
+            <!-- Message input + Send button (disabled until channel opens) -->
             <div class="chat-input-row">
-                <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off">
-                <button id="sendBtn">Send</button>
+                <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off" disabled>
+                <button id="sendBtn" disabled>Send</button>
             </div>
+
 
             <!-- Leave Chat button -->
             <button id="leaveBtn" class="leave-btn">Leave Chat</button>

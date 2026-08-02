@@ -82,13 +82,21 @@ function setupDataChannel(channel) {
 
     dataChannel.onopen = () => {
         console.log("💬 Data channel open.");
-        setStatus('🟢 Connected');
+        setStatus('🟢 Chat Connected - Type a message!');
         showChatUI(true);
+        // Enable the input and Send button once the channel is open
+        chatInput.disabled = false;
+        sendBtn.disabled = false;
+        chatInput.focus();
     };
 
     dataChannel.onclose = () => {
         console.log("💬 Data channel closed.");
+        // Re-disable the inputs when the channel closes
+        chatInput.disabled = true;
+        sendBtn.disabled = true;
     };
+
 
     dataChannel.onmessage = (event) => {
         console.log("💬 Message received:", event.data);
@@ -205,7 +213,32 @@ function createPeerConnection() {
 }
 
 // ============================================================
-// Join a room (Caller)
+// AUTO-DIAL LOGIC (Caller)
+// The user who was already in the room when the second user
+// joins becomes the Caller. They create the data channel and
+// emit the offer automatically - no manual dial button needed.
+// ============================================================
+async function autoDial() {
+    if (!peerConnection || !currentRoom) {
+        console.log("No peer connection to dial with.");
+        return;
+    }
+
+    setStatus('🟢 Peer joined. Establishing chat connection...');
+
+    try {
+        // Create the Offer (data channel already created in joinRoom)
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('offer', { roomId: currentRoom, sdp: offer });
+        console.log("📤 Auto-dial offer sent.");
+    } catch (error) {
+        console.error("❌ Auto-dial failed:", error);
+    }
+}
+
+// ============================================================
+// Join a room (potential Caller)
 // ============================================================
 function joinRoom() {
     const room = roomIdInput.value.trim();
@@ -215,7 +248,9 @@ function joinRoom() {
     // Create the peer connection immediately (NO media)
     createPeerConnection();
 
-    // Caller creates the data channel
+    // Caller creates the data channel BEFORE createOffer so the
+    // SDP includes the data channel. This is set up now so that
+    // when the second user joins, autoDial() can fire immediately.
     const channel = peerConnection.createDataChannel("chat");
     setupDataChannel(channel);
 
@@ -223,6 +258,7 @@ function joinRoom() {
     socket.emit('join', room);
     setStatus(`Waiting for peer in Room ${room}...`);
 }
+
 
 // ============================================================
 // Send a message
@@ -255,8 +291,12 @@ socket.on('room-full', () => {
 });
 
 socket.on('peer-joined', () => {
-    setStatus('🟢 Peer joined room. Ready to chat.');
+    // The user who was already in the room becomes the Caller.
+    // Automatically initiate the Offer/Answer handshake.
+    console.log("🟢 Peer joined room. Auto-dialing as Caller...");
+    autoDial();
 });
+
 
 socket.on('peer-left', () => {
     setStatus('🔴 Peer left the room.');
