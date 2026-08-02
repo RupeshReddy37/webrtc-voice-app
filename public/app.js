@@ -4,28 +4,33 @@
 
 // ============================================================
 // 4. METERED.CA WATERFALL ICE CONFIGURATION
-// Provides STUN + multiple TURN fallbacks (UDP, TCP, TLS).
-// The WebRTC engine races all options and automatically selects
-// the TLS/TCP route (TURNS on port 443) when UDP is blocked by
-// strict NAT/firewalls. TURNS encrypts the DTLS handshake to
-// look like standard HTTPS traffic, bypassing the firewall.
+// Each TURN URL is a SEPARATE object. This forces the WebRTC
+// engine to evaluate TCP and TLS independently if UDP fails.
+// If the UDP TURN (port 80) times out with ErrorCode 701, the
+// engine will independently test the TCP (port 443) and TLS
+// (turns:...:443) routes instead of abandoning the connection.
 // ============================================================
 const rtcConfig = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:relay.metered.ca:80" },
         {
-            urls: [
-                "turn:global.relay.metered.ca:80",
-                "turn:global.relay.metered.ca:80?transport=tcp",
-                "turn:global.relay.metered.ca:443",
-                "turns:global.relay.metered.ca:443?transport=tcp"
-            ],
+            urls: "turn:global.relay.metered.ca:80",
             username: "a759448519ca87baa4a012c3",
-            credential: "H74evKOmY6AWXGOy",
+            credential: "H74evKOmY6AWXGOy"
+        },
+        {
+            urls: "turn:global.relay.metered.ca:443?transport=tcp",
+            username: "a759448519ca87baa4a012c3",
+            credential: "H74evKOmY6AWXGOy"
+        },
+        {
+            urls: "turns:global.relay.metered.ca:443?transport=tcp",
+            username: "a759448519ca87baa4a012c3",
+            credential: "H74evKOmY6AWXGOy"
         }
     ]
 };
+
 
 
 // ============================================================
@@ -74,6 +79,44 @@ async function flushIceCandidatesQueue() {
         }
     }
 }
+
+// ============================================================
+// 2b. SEAMLESS ICE RESTART (Network Switching)
+// When the network path breaks (Wi-Fi -> 4G, IP change), the
+// ICE connection drops. We trigger an ICE restart by creating a
+// new offer with { iceRestart: true }. This re-gathers candidates
+// on the new network without tearing down the media session.
+// ============================================================
+let iceRestartInProgress = false;
+
+async function handleIceRestart() {
+    // Guard against concurrent restarts
+    if (iceRestartInProgress) {
+        console.log("ICE restart already in progress. Skipping.");
+        return;
+    }
+    if (!peerConnection || !currentRoom) {
+        console.log("No active connection to restart.");
+        return;
+    }
+
+    iceRestartInProgress = true;
+    console.log("🔄 Network drop detected. Initiating ICE restart...");
+
+    try {
+        // Create a new offer with iceRestart: true
+        const offer = await peerConnection.createOffer({ iceRestart: true });
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('offer', { roomId: currentRoom, sdp: offer });
+        console.log("🔄 ICE restart offer sent.");
+    } catch (error) {
+        console.error("❌ ICE restart failed:", error);
+    } finally {
+        // Allow future restarts after a short cooldown
+        setTimeout(() => { iceRestartInProgress = false; }, 3000);
+    }
+}
+
 
 // ============================================================
 // UI Helpers
@@ -180,12 +223,18 @@ async function startCall() {
         }
     };
 
-    // Log connection state changes
+    // Log connection state changes + trigger ICE restart on network drop
     peerConnection.oniceconnectionstatechange = () => {
         console.log(`[ICE] Connection state: ${peerConnection.iceConnectionState}`);
         if (peerConnection.iceConnectionState === 'connected') {
             setStatus('Video Call Connected', 'connected');
             setUIState('connected');
+        }
+        // Network switch (Wi-Fi -> 4G) or path loss: restart ICE to re-establish
+        if (peerConnection.iceConnectionState === 'disconnected' ||
+            peerConnection.iceConnectionState === 'failed') {
+            console.log("⚠️ Network drop detected. Triggering ICE restart...");
+            handleIceRestart();
         }
     };
 
@@ -194,6 +243,7 @@ async function startCall() {
     await peerConnection.setLocalDescription(offer);
     socket.emit('offer', { roomId: currentRoom, sdp: offer });
 }
+
 
 // ============================================================
 // Answer an incoming call
@@ -231,17 +281,24 @@ async function answerCall() {
         }
     };
 
-    // Log connection state changes
+    // Log connection state changes + trigger ICE restart on network drop
     peerConnection.oniceconnectionstatechange = () => {
         console.log(`[ICE] Connection state: ${peerConnection.iceConnectionState}`);
         if (peerConnection.iceConnectionState === 'connected') {
             setStatus('Video Call Connected', 'connected');
             setUIState('connected');
         }
+        // Network switch (Wi-Fi -> 4G) or path loss: restart ICE to re-establish
+        if (peerConnection.iceConnectionState === 'disconnected' ||
+            peerConnection.iceConnectionState === 'failed') {
+            console.log("⚠️ Network drop detected. Triggering ICE restart...");
+            handleIceRestart();
+        }
     };
 
     // Set the remote description from the incoming offer
     await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOffer));
+
 
     // FLUSH the queue now that remote description is set!
     await flushIceCandidatesQueue();
@@ -310,11 +367,35 @@ socket.on('peer-left', () => {
     endCall(false);
 });
 
-socket.on('offer', (data) => {
+socket.on('offer', async (data) => {
+    // If a call is already active (peerConnection exists), this is an
+    // ICE restart offer (network switch). Handle it seamlessly WITHOUT
+    // resetting the video elements or tearing down the media session.
+    if (peerConnection && peerConnection.remoteDescription) {
+        console.log("🔄 Received ICE restart offer. Applying new remote description...");
+        try {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+
+            // Flush any queued ICE candidates from the restart
+            await flushIceCandidatesQueue();
+
+            // Generate and send a new answer
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('answer', { roomId: currentRoom, sdp: answer });
+            console.log("🔄 ICE restart answer sent.");
+        } catch (error) {
+            console.error("❌ Failed to handle ICE restart offer:", error);
+        }
+        return;
+    }
+
+    // Otherwise, this is a brand-new incoming call
     incomingOffer = data.sdp;
     setStatus('Incoming Video Call...', 'incoming');
     setUIState('incoming');
 });
+
 
 socket.on('answer', async (data) => {
     console.log("Received Answer, setting remote description...");
