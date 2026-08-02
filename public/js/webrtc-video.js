@@ -1,9 +1,6 @@
 // public/js/webrtc-video.js
 // Reusable WebRTC Video Module - single-responsibility helper functions
-
-const STUN_CONFIG = {
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-};
+import { RTC_CONFIG } from './config.js';
 
 /**
  * 1. Captures local camera and microphone
@@ -29,7 +26,7 @@ export async function startCamera(localVideoElement) {
  * @returns {RTCPeerConnection} The configured peer connection.
  */
 export function createPeerConnection(localStream, onIceCandidate, onRemoteStream) {
-    const pc = new RTCPeerConnection(STUN_CONFIG);
+    const pc = new RTCPeerConnection(RTC_CONFIG);
 
     // Attach local camera & audio tracks to peer connection
     if (localStream) {
