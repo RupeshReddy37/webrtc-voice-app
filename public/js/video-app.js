@@ -77,6 +77,8 @@ socket.on('answer', async (data) => {
 });
 
 socket.on('ice-candidate', async (data) => {
+    console.log("📥 Received remote ICE candidate from socket!", data); // ADD THIS LINE
+
     // If the connection is ready and remote description is set, apply immediately
     if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
         await WebRTCVideo.applyIceCandidate(peerConnection, data.candidate);
@@ -85,6 +87,7 @@ socket.on('ice-candidate', async (data) => {
         iceCandidatesQueue.push(data.candidate);
     }
 });
+
 
 
 socket.on('hangup', () => endCall(false));
