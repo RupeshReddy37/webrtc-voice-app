@@ -2,8 +2,10 @@
 // P2P Text Chat WebRTC logic (chat.html)
 // Vanilla JS + Socket.io
 // NO MEDIA - data channel only.
-// Includes: waterfall ICE config, bulletproof ICE queue,
-// data channel setup, and strict reset logic.
+// Mirrors the reliable "Dial Call" flow: the user explicitly clicks
+// "Connect Chat" to start the Offer/Answer handshake as the Caller.
+// Includes: waterfall ICE config, bulletproof ICE queue, data channel
+// setup, and strict reset logic.
 
 // ============================================================
 // WATERFALL ICE CONFIGURATION (Metered.ca)
@@ -41,6 +43,7 @@ const chatUI = document.getElementById('chatUI');
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
+const connectChatBtn = document.getElementById('connectChatBtn');
 const leaveBtn = document.getElementById('leaveBtn');
 const voiceToggle = document.getElementById('voiceToggle');
 const videoToggle = document.getElementById('videoToggle');
@@ -80,30 +83,31 @@ async function flushIceCandidatesQueue() {
 function setupDataChannel(channel) {
     dataChannel = channel;
 
-    dataChannel.onopen = () => {
+    channel.onopen = () => {
         console.log("💬 Data channel open.");
-        setStatus('🟢 Chat Connected - Type a message!');
-        showChatUI(true);
-        // Enable the input and Send button once the channel is open
-        chatInput.disabled = false;
-        sendBtn.disabled = false;
-        chatInput.focus();
+        // Enable the input and Send button ONLY once the channel is open
+        document.getElementById('chatInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('statusText').innerHTML = "🟢 Chat Connected - Type a message!";
+        // Hide the Connect Chat button once connected
+        document.getElementById('connectChatBtn').style.display = 'none';
+        document.getElementById('chatInput').focus();
     };
 
-    dataChannel.onclose = () => {
+    channel.onclose = () => {
         console.log("💬 Data channel closed.");
-        // Re-disable the inputs when the channel closes
-        chatInput.disabled = true;
-        sendBtn.disabled = true;
+        // Re-disable inputs and show the Connect Chat button again
+        document.getElementById('chatInput').disabled = true;
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('connectChatBtn').style.display = 'block';
     };
 
-
-    dataChannel.onmessage = (event) => {
+    channel.onmessage = (event) => {
         console.log("💬 Message received:", event.data);
         appendMessage('Peer', event.data);
     };
 
-    dataChannel.onerror = (error) => {
+    channel.onerror = (error) => {
         console.error("💬 Data channel error:", error);
     };
 }
@@ -119,7 +123,6 @@ function showChatUI(show) {
     if (show) {
         joinControls.classList.add('hidden');
         chatUI.classList.remove('hidden');
-        chatInput.focus();
     } else {
         joinControls.classList.remove('hidden');
         chatUI.classList.add('hidden');
@@ -174,12 +177,17 @@ function resetChat() {
     incomingOffer = null;
     iceCandidatesQueue = [];
 
+    // Re-disable inputs and reset the Connect Chat button
+    chatInput.disabled = true;
+    sendBtn.disabled = true;
+    connectChatBtn.style.display = 'block';
+
     setStatus('🔴 Disconnected');
 }
 
 // ============================================================
 // STRICT INITIALIZATION (NO MEDIA)
-// Create the RTCPeerConnection immediately when the user joins.
+// Create the RTCPeerConnection with the waterfall config.
 // ============================================================
 function createPeerConnection() {
     // Create RTCPeerConnection with the waterfall config
@@ -195,7 +203,8 @@ function createPeerConnection() {
     // Callee listens for the incoming data channel
     peerConnection.ondatachannel = (event) => {
         console.log("💬 Received data channel from peer.");
-        setupDataChannel(event.channel);
+        dataChannel = event.channel;
+        setupDataChannel(dataChannel);
     };
 
     // STRICT RESET LOGIC: listen to connection state changes
@@ -213,52 +222,76 @@ function createPeerConnection() {
 }
 
 // ============================================================
-// AUTO-DIAL LOGIC (Caller)
-// The user who was already in the room when the second user
-// joins becomes the Caller. They create the data channel and
-// emit the offer automatically - no manual dial button needed.
+// START CHAT CONNECTION (Caller)
+// Mirrors the "Dial Call" logic. The user explicitly clicks
+// "Connect Chat" to initiate the Offer/Answer handshake.
 // ============================================================
-async function autoDial() {
-    if (!peerConnection || !currentRoom) {
-        console.log("No peer connection to dial with.");
+async function startChatConnection() {
+    if (!socket.connected) {
+        alert('Connection lost. Please wait for reconnection.');
+        return;
+    }
+    if (!currentRoom) {
+        alert('Please join a room first.');
         return;
     }
 
-    setStatus('🟢 Peer joined. Establishing chat connection...');
+    setStatus('📤 Connecting chat...');
 
-    try {
-        // Create the Offer (data channel already created in joinRoom)
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        socket.emit('offer', { roomId: currentRoom, sdp: offer });
-        console.log("📤 Auto-dial offer sent.");
-    } catch (error) {
-        console.error("❌ Auto-dial failed:", error);
-    }
+    // STEP 1: Initialize RTCPeerConnection (NO media)
+    peerConnection = new RTCPeerConnection(rtcConfig);
+
+    // STEP 2: CRITICAL - Create the data channel BEFORE the offer
+    // so the SDP includes the data channel.
+    dataChannel = peerConnection.createDataChannel("chat");
+
+    // STEP 3: Bind channel events
+    setupDataChannel(dataChannel);
+
+    // Handle ICE candidate discovery -> send to peer via socket
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.emit('ice-candidate', { roomId: currentRoom, candidate: event.candidate });
+        }
+    };
+
+    // Callee listens for the incoming data channel
+    peerConnection.ondatachannel = (event) => {
+        console.log("💬 Received data channel from peer.");
+        dataChannel = event.channel;
+        setupDataChannel(dataChannel);
+    };
+
+    // STRICT RESET LOGIC: listen to connection state changes
+    peerConnection.onconnectionstatechange = () => {
+        console.log(`[CONNECTION] State: ${peerConnection.connectionState}`);
+        if (peerConnection.connectionState === 'disconnected' ||
+            peerConnection.connectionState === 'failed' ||
+            peerConnection.connectionState === 'closed') {
+            console.log("⚠️ Connection lost. Resetting chat...");
+            resetChat();
+        }
+    };
+
+    // STEP 4: Create the Offer, set local description, and emit it
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.emit('offer', { roomId: currentRoom, sdp: offer });
+    console.log("📤 Offer sent.");
 }
 
 // ============================================================
-// Join a room (potential Caller)
+// Join a room
 // ============================================================
 function joinRoom() {
     const room = roomIdInput.value.trim();
     if (!room) return alert('Please enter a Room ID');
     currentRoom = room;
 
-    // Create the peer connection immediately (NO media)
-    createPeerConnection();
-
-    // Caller creates the data channel BEFORE createOffer so the
-    // SDP includes the data channel. This is set up now so that
-    // when the second user joins, autoDial() can fire immediately.
-    const channel = peerConnection.createDataChannel("chat");
-    setupDataChannel(channel);
-
     // Join the room via socket
     socket.emit('join', room);
     setStatus(`Waiting for peer in Room ${room}...`);
 }
-
 
 // ============================================================
 // Send a message
@@ -291,12 +324,8 @@ socket.on('room-full', () => {
 });
 
 socket.on('peer-joined', () => {
-    // The user who was already in the room becomes the Caller.
-    // Automatically initiate the Offer/Answer handshake.
-    console.log("🟢 Peer joined room. Auto-dialing as Caller...");
-    autoDial();
+    setStatus('🟢 Peer joined room. Click "Connect Chat" to start.');
 });
-
 
 socket.on('peer-left', () => {
     setStatus('🔴 Peer left the room.');
@@ -325,24 +354,51 @@ socket.on('offer', async (data) => {
         return;
     }
 
-    // Otherwise, this is a brand-new incoming connection
+    // Otherwise, this is a brand-new incoming connection.
+    // Act as the Callee.
     incomingOffer = data.sdp;
+    setStatus('📥 Incoming chat connection...');
 
-    // Create the peer connection (NO media) if not already created
-    if (!peerConnection) {
-        createPeerConnection();
-    }
+    // STEP 1: Initialize RTCPeerConnection (NO media)
+    peerConnection = new RTCPeerConnection(rtcConfig);
 
-    // Set the remote description from the incoming offer
+    // STEP 2: CRITICAL - DO NOT create a data channel here.
+    // Listen for the incoming channel instead.
+    peerConnection.ondatachannel = (event) => {
+        console.log("💬 Received data channel from peer.");
+        dataChannel = event.channel;
+        setupDataChannel(dataChannel);
+    };
+
+    // Handle ICE candidate discovery -> send to peer via socket
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.emit('ice-candidate', { roomId: currentRoom, candidate: event.candidate });
+        }
+    };
+
+    // STRICT RESET LOGIC: listen to connection state changes
+    peerConnection.onconnectionstatechange = () => {
+        console.log(`[CONNECTION] State: ${peerConnection.connectionState}`);
+        if (peerConnection.connectionState === 'disconnected' ||
+            peerConnection.connectionState === 'failed' ||
+            peerConnection.connectionState === 'closed') {
+            console.log("⚠️ Connection lost. Resetting chat...");
+            resetChat();
+        }
+    };
+
+    // STEP 3: Set the remote description from the incoming offer
     await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOffer));
 
     // FLUSH the queue now that remote description is set!
     await flushIceCandidatesQueue();
 
-    // Create and emit the Answer
+    // STEP 4: Create and emit the Answer
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
     socket.emit('answer', { roomId: currentRoom, sdp: answer });
+    console.log("📤 Answer sent.");
 });
 
 socket.on('answer', async (data) => {
@@ -373,6 +429,7 @@ socket.on('ice-candidate', async (data) => {
 // Event Listeners
 // ============================================================
 joinBtn.addEventListener('click', joinRoom);
+connectChatBtn.addEventListener('click', startChatConnection);
 sendBtn.addEventListener('click', sendMessage);
 leaveBtn.addEventListener('click', () => {
     // Notify the peer we're leaving, then reset

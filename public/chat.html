@@ -29,6 +29,9 @@
 
         <!-- Active State: Chat UI (hidden until connected) -->
         <div class="chat-ui hidden" id="chatUI">
+            <!-- Manual Connect Chat button (mirrors Dial Call logic) -->
+            <button id="connectChatBtn" class="primary-btn">Connect Chat</button>
+
             <!-- Scrollable message history -->
             <div class="chat-messages" id="chatMessages"></div>
 
@@ -42,6 +45,7 @@
             <!-- Leave Chat button -->
             <button id="leaveBtn" class="leave-btn">Leave Chat</button>
         </div>
+
     </div>
 
     <!-- Socket.io client library -->

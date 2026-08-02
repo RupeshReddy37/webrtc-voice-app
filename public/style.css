@@ -309,6 +309,30 @@ input[type="text"]:focus {
     transform: translateY(-2px);
 }
 
+/* Primary action button (Connect Chat) */
+.primary-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: #66bb6a;
+    color: #ffffff;
+    transition: transform 0.1s ease, opacity 0.2s ease;
+}
+
+.primary-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.primary-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
 /* Custom scrollbar for the message history */
 .chat-messages::-webkit-scrollbar {
     width: 8px;
