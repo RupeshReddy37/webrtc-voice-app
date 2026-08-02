@@ -1,14 +1,13 @@
-// public/app.js
-// Production-ready 1-on-1 WebRTC Video Calling client logic
+// public/audio-app.js
+// Production-ready 1-on-1 Audio-only WebRTC calling client logic
 // Vanilla JS + Socket.io
+// Uses the SAME strict initialization, ICE queueing, and Metered.ca
+// TURNS waterfall configuration as the video app.
 
 // ============================================================
-// 4. METERED.CA WATERFALL ICE CONFIGURATION
+// METERED.CA WATERFALL ICE CONFIGURATION
 // Each TURN URL is a SEPARATE object. This forces the WebRTC
 // engine to evaluate TCP and TLS independently if UDP fails.
-// If the UDP TURN (port 80) times out with ErrorCode 701, the
-// engine will independently test the TCP (port 443) and TLS
-// (turns:...:443) routes instead of abandoning the connection.
 // ============================================================
 const rtcConfig = {
     iceServers: [
@@ -31,8 +30,6 @@ const rtcConfig = {
     ]
 };
 
-
-
 // ============================================================
 // Socket.io connection
 // ============================================================
@@ -48,8 +45,8 @@ const answerBtn = document.getElementById('answerBtn');
 const endBtn = document.getElementById('endBtn');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
+const avatar = document.getElementById('avatar');
+const callState = document.getElementById('callState');
 
 // ============================================================
 // State
@@ -60,7 +57,7 @@ let localStream = null;
 let incomingOffer = null;
 
 // ============================================================
-// 3. BULLETPROOF ICE QUEUEING
+// BULLETPROOF ICE QUEUEING
 // ICE candidates arriving before setRemoteDescription are held
 // here and flushed the exact millisecond the description is set.
 // ============================================================
@@ -81,16 +78,14 @@ async function flushIceCandidatesQueue() {
 }
 
 // ============================================================
-// 2b. SEAMLESS ICE RESTART (Network Switching)
+// SEAMLESS ICE RESTART (Network Switching)
 // When the network path breaks (Wi-Fi -> 4G, IP change), the
 // ICE connection drops. We trigger an ICE restart by creating a
-// new offer with { iceRestart: true }. This re-gathers candidates
-// on the new network without tearing down the media session.
+// new offer with { iceRestart: true }.
 // ============================================================
 let iceRestartInProgress = false;
 
 async function handleIceRestart() {
-    // Guard against concurrent restarts
     if (iceRestartInProgress) {
         console.log("ICE restart already in progress. Skipping.");
         return;
@@ -104,7 +99,6 @@ async function handleIceRestart() {
     console.log("🔄 Network drop detected. Initiating ICE restart...");
 
     try {
-        // Create a new offer with iceRestart: true
         const offer = await peerConnection.createOffer({ iceRestart: true });
         await peerConnection.setLocalDescription(offer);
         socket.emit('offer', { roomId: currentRoom, sdp: offer });
@@ -112,11 +106,9 @@ async function handleIceRestart() {
     } catch (error) {
         console.error("❌ ICE restart failed:", error);
     } finally {
-        // Allow future restarts after a short cooldown
         setTimeout(() => { iceRestartInProgress = false; }, 3000);
     }
 }
-
 
 // ============================================================
 // UI Helpers
@@ -134,55 +126,31 @@ function setUIState(state) {
     if (state === 'idle') {
         dialBtn.classList.remove('hidden');
         dialBtn.disabled = !currentRoom;
+        avatar.classList.remove('calling', 'connected');
+        callState.innerText = 'Idle';
     } else if (state === 'calling') {
         endBtn.classList.remove('hidden');
+        avatar.classList.add('calling');
+        avatar.classList.remove('connected');
+        callState.innerText = 'Calling...';
     } else if (state === 'incoming') {
         answerBtn.classList.remove('hidden');
         endBtn.classList.remove('hidden');
+        avatar.classList.add('calling');
+        avatar.classList.remove('connected');
+        callState.innerText = 'Incoming Call...';
     } else if (state === 'connected') {
         endBtn.classList.remove('hidden');
+        avatar.classList.add('connected');
+        avatar.classList.remove('calling');
+        callState.innerText = 'Connected';
     }
 }
 
 // ============================================================
-// 5. AUTOPLAY POLICY HANDLING + TRACK-SWALLOWING FIX
-// ontrack fires once per track (audio AND video). We must attach
-// the stream to the video element whenever it's a NEW stream,
-// regardless of which track arrives first. The AbortError from
-// .play() is handled gracefully without blocking track assignment.
-// ============================================================
-function handleRemoteStream(stream) {
-    console.log("Remote stream received:", stream);
-
-    // Standard logic: only re-assign if this is a DIFFERENT stream.
-    // This handles both the audio track and the video track arriving
-    // on the same stream object without swallowing either one.
-    if (remoteVideo.srcObject !== stream) {
-        remoteVideo.srcObject = stream;
-    }
-
-    // Force playback and handle browser autoplay policy blocks.
-    // AbortError (play interrupted by a new load) is harmless and ignored.
-    const playPromise = remoteVideo.play();
-    if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-            if (error.name === 'AbortError') {
-                console.warn("Playback interrupted (AbortError) - ignoring.");
-                return;
-            }
-            console.warn("Autoplay blocked. Retrying muted playback:", error);
-            remoteVideo.muted = true;
-            remoteVideo.play();
-        });
-    }
-}
-
-
-// ============================================================
-// 2. STRICT INITIALIZATION SEQUENCE
-// getUserMedia -> attach to DOM -> create RTCPeerConnection
-// -> add tracks -> emit offer. NEVER create the connection
-// before the local stream is fully loaded.
+// STRICT INITIALIZATION SEQUENCE
+// getUserMedia -> create RTCPeerConnection -> add tracks -> emit offer.
+// NEVER create the connection before the local stream is loaded.
 // ============================================================
 async function startCall() {
     if (!socket.connected) {
@@ -195,21 +163,18 @@ async function startCall() {
     }
 
     setUIState('calling');
-    setStatus('Calling with Video...', 'calling');
+    setStatus('Calling...', 'calling');
 
-    // STEP 1: Await getUserMedia (blocks until camera/mic ready)
+    // STEP 1: Await getUserMedia (audio only)
     localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }
+        video: false
     });
 
-    // STEP 2: Attach local stream to the DOM video element
-    localVideo.srcObject = localStream;
-
-    // STEP 3: Initialize RTCPeerConnection (only now, stream is ready)
+    // STEP 2: Initialize RTCPeerConnection (only now, stream is ready)
     peerConnection = new RTCPeerConnection(rtcConfig);
 
-    // STEP 4: Add local tracks to the peer connection
+    // STEP 3: Add local audio track to the peer connection
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
     // Handle ICE candidate discovery -> send to peer via socket
@@ -219,21 +184,13 @@ async function startCall() {
         }
     };
 
-    // Handle incoming remote stream
-    peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-            handleRemoteStream(event.streams[0]);
-        }
-    };
-
     // Log connection state changes + trigger ICE restart on network drop
     peerConnection.oniceconnectionstatechange = () => {
         console.log(`[ICE] Connection state: ${peerConnection.iceConnectionState}`);
         if (peerConnection.iceConnectionState === 'connected') {
-            setStatus('Video Call Connected', 'connected');
+            setStatus('Audio Call Connected', 'connected');
             setUIState('connected');
         }
-        // Network switch (Wi-Fi -> 4G) or path loss: restart ICE to re-establish
         if (peerConnection.iceConnectionState === 'disconnected' ||
             peerConnection.iceConnectionState === 'failed') {
             console.log("⚠️ Network drop detected. Triggering ICE restart...");
@@ -241,12 +198,11 @@ async function startCall() {
         }
     };
 
-    // STEP 5: Create and emit the Offer
+    // STEP 4: Create and emit the Offer
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
     socket.emit('offer', { roomId: currentRoom, sdp: offer });
 }
-
 
 // ============================================================
 // Answer an incoming call
@@ -255,19 +211,16 @@ async function answerCall() {
     setUIState('connected');
     setStatus('Connecting...', 'calling');
 
-    // STEP 1: Await getUserMedia
+    // STEP 1: Await getUserMedia (audio only)
     localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }
+        video: false
     });
 
-    // STEP 2: Attach local stream to the DOM
-    localVideo.srcObject = localStream;
-
-    // STEP 3: Initialize RTCPeerConnection
+    // STEP 2: Initialize RTCPeerConnection
     peerConnection = new RTCPeerConnection(rtcConfig);
 
-    // STEP 4: Add local tracks
+    // STEP 3: Add local audio track
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
     // Handle ICE candidate discovery
@@ -277,21 +230,13 @@ async function answerCall() {
         }
     };
 
-    // Handle incoming remote stream
-    peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-            handleRemoteStream(event.streams[0]);
-        }
-    };
-
     // Log connection state changes + trigger ICE restart on network drop
     peerConnection.oniceconnectionstatechange = () => {
         console.log(`[ICE] Connection state: ${peerConnection.iceConnectionState}`);
         if (peerConnection.iceConnectionState === 'connected') {
-            setStatus('Video Call Connected', 'connected');
+            setStatus('Audio Call Connected', 'connected');
             setUIState('connected');
         }
-        // Network switch (Wi-Fi -> 4G) or path loss: restart ICE to re-establish
         if (peerConnection.iceConnectionState === 'disconnected' ||
             peerConnection.iceConnectionState === 'failed') {
             console.log("⚠️ Network drop detected. Triggering ICE restart...");
@@ -301,7 +246,6 @@ async function answerCall() {
 
     // Set the remote description from the incoming offer
     await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOffer));
-
 
     // FLUSH the queue now that remote description is set!
     await flushIceCandidatesQueue();
@@ -331,9 +275,6 @@ function endCall(emitHangup = true) {
     localStream = null;
     incomingOffer = null;
     iceCandidatesQueue = [];
-
-    localVideo.srcObject = null;
-    remoteVideo.srcObject = null;
 
     setStatus(currentRoom ? 'Peer in room. Ready.' : 'Disconnected', 'idle');
     setUIState('idle');
@@ -373,7 +314,7 @@ socket.on('peer-left', () => {
 socket.on('offer', async (data) => {
     // If a call is already active (peerConnection exists), this is an
     // ICE restart offer (network switch). Handle it seamlessly WITHOUT
-    // resetting the video elements or tearing down the media session.
+    // tearing down the media session.
     if (peerConnection && peerConnection.remoteDescription) {
         console.log("🔄 Received ICE restart offer. Applying new remote description...");
         try {
@@ -395,10 +336,9 @@ socket.on('offer', async (data) => {
 
     // Otherwise, this is a brand-new incoming call
     incomingOffer = data.sdp;
-    setStatus('Incoming Video Call...', 'incoming');
+    setStatus('Incoming Audio Call...', 'incoming');
     setUIState('incoming');
 });
-
 
 socket.on('answer', async (data) => {
     console.log("Received Answer, setting remote description...");

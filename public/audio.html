@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1-on-1 Audio Call</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container audio-container">
+        <h1>🎧 1-on-1 Audio Call</h1>
+
+        <!-- Room Join Controls -->
+        <div class="controls">
+            <input type="text" id="roomIdInput" placeholder="Enter Room ID" autocomplete="off">
+            <button id="joinBtn">Join Room</button>
+        </div>
+
+        <!-- Call Controls -->
+        <div class="controls">
+            <button id="dialBtn" class="hidden" disabled>📞 Call</button>
+            <button id="answerBtn" class="hidden">✅ Answer</button>
+            <button id="endBtn" class="hidden">📵 End Call</button>
+        </div>
+
+        <!-- Status Indicator -->
+        <div class="status">
+            <span id="statusDot" class="status-dot idle"></span>
+            <span id="statusText">Enter a Room ID to begin</span>
+        </div>
+
+        <!-- Audio Call UI: pulsing avatar / microphone icon (no video boxes) -->
+        <div class="audio-visual">
+            <div class="avatar" id="avatar">
+                <span class="mic-icon">🎙️</span>
+            </div>
+            <div class="call-state" id="callState">Idle</div>
+        </div>
+    </div>
+
+    <!-- Socket.io client library -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Audio-only WebRTC logic -->
+    <script src="audio-app.js"></script>
+</body>
+</html>

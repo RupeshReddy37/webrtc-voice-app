@@ -188,3 +188,72 @@ video {
         grid-template-columns: 1fr;
     }
 }
+
+/* ============================================================
+   AUDIO CALL UI (audio.html)
+   Pulsing avatar / microphone icon - no video boxes.
+   ============================================================ */
+.audio-container {
+    max-width: 480px;
+    text-align: center;
+}
+
+.audio-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 40px 0;
+}
+
+.avatar {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4fc3f7, #0f3460);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 32px rgba(79, 195, 247, 0.3);
+    transition: transform 0.2s ease;
+}
+
+.mic-icon {
+    font-size: 3.5rem;
+    line-height: 1;
+}
+
+/* Pulsing animation while calling / incoming */
+.avatar.calling {
+    animation: avatarPulse 1.5s infinite;
+}
+
+@keyframes avatarPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(79, 195, 247, 0.5);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 20px rgba(79, 195, 247, 0);
+        transform: scale(1.05);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(79, 195, 247, 0);
+        transform: scale(1);
+    }
+}
+
+/* Solid green glow when connected */
+.avatar.connected {
+    background: linear-gradient(135deg, #66bb6a, #2e7d32);
+    box-shadow: 0 8px 32px rgba(102, 187, 106, 0.4);
+}
+
+.call-state {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+
