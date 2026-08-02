@@ -75,6 +75,23 @@ socket.on('ice-candidate', async (data) => {
 
 socket.on('hangup', () => endCall(false));
 
+// Function to handle incoming remote stream and force playback
+function handleRemoteStream(stream) {
+    console.log("Remote stream received:", stream);
+    remoteVideo.srcObject = stream;
+
+    // Force playback and handle browser autoplay policy blocks
+    const playPromise = remoteVideo.play();
+    if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+            console.warn("Autoplay blocked by browser policy. Retrying muted playback:", error);
+            // Fallback: Mute remote video temporarily so browser allows video frames to render
+            remoteVideo.muted = true;
+            remoteVideo.play();
+        });
+    }
+}
+
 // Call Actions
 async function startCall() {
     setUIState('calling');
@@ -83,7 +100,7 @@ async function startCall() {
     peerConnection = WebRTCVideo.createPeerConnection(
         localStream,
         (candidate) => socket.emit('ice-candidate', { roomId: currentRoom, candidate }),
-        (stream) => { remoteVideo.srcObject = stream; }
+        (stream) => handleRemoteStream(stream) // 👈 Updated callback
     );
 
     const offer = await WebRTCVideo.generateOffer(peerConnection);
@@ -97,12 +114,13 @@ async function answerCall() {
     peerConnection = WebRTCVideo.createPeerConnection(
         localStream,
         (candidate) => socket.emit('ice-candidate', { roomId: currentRoom, candidate }),
-        (stream) => { remoteVideo.srcObject = stream; }
+        (stream) => handleRemoteStream(stream) // 👈 Updated callback
     );
 
     const answer = await WebRTCVideo.generateAnswer(peerConnection, incomingOffer);
     socket.emit('answer', { roomId: currentRoom, sdp: answer });
 }
+
 
 function endCall(emitHangup = true) {
     if (emitHangup && currentRoom) {
