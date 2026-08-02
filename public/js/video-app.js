@@ -23,6 +23,45 @@ let localStream = null;
 let incomingOffer = null;
 let iceCandidatesQueue = [];
 
+// ===== BIDIRECTIONAL ICE VERIFICATION (Root Cause 1) =====
+// Track how many candidates we SEND vs RECEIVE, and their types.
+// If one side sends but the other never receives, we have asymmetric signaling.
+let iceStats = {
+    sent: { host: 0, srflx: 0, relay: 0, total: 0 },
+    received: { host: 0, srflx: 0, relay: 0, total: 0 }
+};
+
+function getCandidateType(candidate) {
+    if (!candidate) return 'unknown';
+    // candidate.candidate is the full SDP line, e.g. "candidate:1 1 udp ... typ host ..."
+    const match = candidate.candidate ? candidate.candidate.match(/typ\s+(\w+)/) : null;
+    return match ? match[1] : 'unknown';
+}
+
+function logIceDirection(direction, candidate) {
+    const type = getCandidateType(candidate);
+    if (direction === 'sent') {
+        iceStats.sent[type] = (iceStats.sent[type] || 0) + 1;
+        iceStats.sent.total++;
+    } else {
+        iceStats.received[type] = (iceStats.received[type] || 0) + 1;
+        iceStats.received.total++;
+    }
+    console.log(`[ICE:${direction}] type=${type} | SENT total=${iceStats.sent.total} | RECEIVED total=${iceStats.received.total}`);
+}
+
+function printIceSummary() {
+    console.log("========== ICE BIDIRECTIONAL SUMMARY ==========");
+    console.log("SENT candidates:", JSON.stringify(iceStats.sent));
+    console.log("RECEIVED candidates:", JSON.stringify(iceStats.received));
+    if (iceStats.sent.total === 0 || iceStats.received.total === 0) {
+        console.error("❌ ASYMMETRIC ICE! One direction has ZERO candidates. The connection cannot establish.");
+    } else {
+        console.log("✅ Both directions have candidates. Signaling is symmetric.");
+    }
+    console.log("===============================================");
+}
+
 // This function frees the hostage candidates and injects them into the connection
 async function processIceCandidatesQueue() {
     console.log(`Flushing ${iceCandidatesQueue.length} queued ICE candidates...`);
@@ -37,6 +76,7 @@ async function processIceCandidatesQueue() {
         }
     }
 }
+
 
 
 // Event Listeners
@@ -93,6 +133,7 @@ socket.on('answer', async (data) => {
 
 socket.on('ice-candidate', async (data) => {
     console.log("📥 ICE Candidate arrived from socket:", data.candidate.candidate);
+    logIceDirection('received', data.candidate); // 👈 Track RECEIVED candidates
     
     // Check if the connection is ready to accept candidates
     if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
@@ -108,6 +149,7 @@ socket.on('ice-candidate', async (data) => {
         iceCandidatesQueue.push(data.candidate);
     }
 });
+
 
 
 
@@ -168,7 +210,10 @@ async function startCall() {
 
     peerConnection = WebRTCVideo.createPeerConnection(
         localStream,
-        (candidate) => socket.emit('ice-candidate', { roomId: currentRoom, candidate }),
+        (candidate) => {
+            logIceDirection('sent', candidate); // 👈 Track SENT candidates
+            socket.emit('ice-candidate', { roomId: currentRoom, candidate });
+        },
         (stream) => handleRemoteStream(stream) // 👈 Updated callback
     );
 
@@ -176,19 +221,24 @@ async function startCall() {
     socket.emit('offer', { roomId: currentRoom, sdp: offer });
 }
 
+
 async function answerCall() {
     setUIState('connected');
     localStream = await WebRTCVideo.startCamera(localVideo);
 
     peerConnection = WebRTCVideo.createPeerConnection(
         localStream,
-        (candidate) => socket.emit('ice-candidate', { roomId: currentRoom, candidate }),
+        (candidate) => {
+            logIceDirection('sent', candidate); // 👈 Track SENT candidates
+            socket.emit('ice-candidate', { roomId: currentRoom, candidate });
+        },
         (stream) => handleRemoteStream(stream) // 👈 Updated callback
     );
 
     const answer = await WebRTCVideo.generateAnswer(peerConnection, incomingOffer);
     socket.emit('answer', { roomId: currentRoom, sdp: answer });
 }
+
 
 
 function endCall(emitHangup = true) {

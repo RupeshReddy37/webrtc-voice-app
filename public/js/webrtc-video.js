@@ -30,6 +30,14 @@ export async function startCamera(localVideoElement) {
  * @param {Function} onRemoteStream Callback for the incoming remote stream.
  * @returns {RTCPeerConnection} The configured peer connection.
  */
+// ===== RELAY-ONLY TEST MODE (Root Cause 2) =====
+// Set this to true to force iceTransportPolicy: 'relay'.
+// This makes the browser use ONLY the TURN server (no host/srflx candidates).
+// If the connection STILL fails with relay-only, your TURN server is dropping
+// packets. If it SUCCEEDS, your TURN server works and the issue is elsewhere.
+// IMPORTANT: Set back to false for normal production use.
+const RELAY_ONLY_TEST = false;
+
 export function createPeerConnection(localStream, onIceCandidate, onRemoteStream) {
     // Explicit ICE configuration for reliable cross-network traversal.
     // - iceTransportPolicy: 'all' allows host, srflx, AND relay candidates.
@@ -37,10 +45,11 @@ export function createPeerConnection(localStream, onIceCandidate, onRemoteStream
     // - iceCandidatePoolSize: pre-gathers candidates to speed up connection.
     const pc = new RTCPeerConnection({
         ...RTC_CONFIG,
-        iceTransportPolicy: 'all',
+        iceTransportPolicy: RELAY_ONLY_TEST ? 'relay' : 'all',
         bundlePolicy: 'max-bundle',
         iceCandidatePoolSize: 10
     });
+
 
     // Initialize ICE candidate queue state for this connection
     pendingCandidates.set(pc, { remoteDescriptionSet: false, queue: [] });
@@ -70,6 +79,30 @@ export function createPeerConnection(localStream, onIceCandidate, onRemoteStream
         if (pc.iceConnectionState === 'failed') {
             console.error('[ICE] Connection FAILED - no usable candidate path found.');
         }
+        if (pc.iceConnectionState === 'disconnected') {
+            console.warn('[ICE] Connection DISCONNECTED - media path lost. Likely firewall dropping packets or TURN relay timeout.');
+        }
+    };
+
+    // Log ICE candidate errors (TURN auth failures, UDP drops) - Root Cause 2 & 3
+    pc.onicecandidateerror = (event) => {
+        console.error(`[ICE] Candidate error: url=${event.url} errorCode=${event.errorCode} errorText=${event.errorText}`);
+        if (event.errorCode === 401) {
+            console.error('[ICE] TURN authentication FAILED (401). Check username/credential in config.js.');
+        } else if (event.errorCode === 701) {
+            console.error('[ICE] TURN allocation FAILED (701). The TURN server cannot allocate a relay. Firewall may be blocking UDP.');
+        }
+    };
+
+    // Log overall connection state (includes DTLS handshake) - Root Cause 3
+    pc.onconnectionstatechange = () => {
+        console.log(`[CONNECTION] State: ${pc.connectionState}`);
+        if (pc.connectionState === 'failed') {
+            console.error('[CONNECTION] FAILED - DTLS/SRTP handshake could not complete over the selected path.');
+        }
+        if (pc.connectionState === 'connected') {
+            console.log('[CONNECTION] CONNECTED - DTLS handshake succeeded. Media should flow.');
+        }
     };
 
     // Handle incoming remote video track
@@ -81,6 +114,7 @@ export function createPeerConnection(localStream, onIceCandidate, onRemoteStream
 
     return pc;
 }
+
 
 
 /**
