@@ -75,15 +75,32 @@ socket.on('ice-candidate', async (data) => {
 
 socket.on('hangup', () => endCall(false));
 
-// Function to handle incoming remote stream and force playback
+// Function to handle incoming remote stream and force playback.
+// NOTE: ontrack fires once per media track (audio AND video), so this
+// callback runs twice. We must NOT re-assign srcObject on the second call,
+// otherwise the video element is reset mid-playback and throws an AbortError.
 function handleRemoteStream(stream) {
     console.log("Remote stream received:", stream);
+
+    // Guard: only assign srcObject once (first track arrival).
+    // The second track (audio or video) is added to the SAME stream object,
+    // so the browser renders it automatically without re-assignment.
+    if (remoteVideo.srcObject === stream) {
+        console.log("Stream already attached. Skipping re-assignment to avoid AbortError.");
+        return;
+    }
+
     remoteVideo.srcObject = stream;
 
     // Force playback and handle browser autoplay policy blocks
     const playPromise = remoteVideo.play();
     if (playPromise !== undefined) {
         playPromise.catch((error) => {
+            // Ignore AbortError (play interrupted by a new load request) - harmless.
+            if (error.name === 'AbortError') {
+                console.warn("Playback interrupted (AbortError) - ignoring.");
+                return;
+            }
             console.warn("Autoplay blocked by browser policy. Retrying muted playback:", error);
             // Fallback: Mute remote video temporarily so browser allows video frames to render
             remoteVideo.muted = true;
@@ -91,6 +108,7 @@ function handleRemoteStream(stream) {
         });
     }
 }
+
 
 // Call Actions
 async function startCall() {
