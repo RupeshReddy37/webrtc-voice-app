@@ -31,7 +31,16 @@ export async function startCamera(localVideoElement) {
  * @returns {RTCPeerConnection} The configured peer connection.
  */
 export function createPeerConnection(localStream, onIceCandidate, onRemoteStream) {
-    const pc = new RTCPeerConnection(RTC_CONFIG);
+    // Explicit ICE configuration for reliable cross-network traversal.
+    // - iceTransportPolicy: 'all' allows host, srflx, AND relay candidates.
+    // - bundlePolicy: 'max-bundle' reduces transports to a single one.
+    // - iceCandidatePoolSize: pre-gathers candidates to speed up connection.
+    const pc = new RTCPeerConnection({
+        ...RTC_CONFIG,
+        iceTransportPolicy: 'all',
+        bundlePolicy: 'max-bundle',
+        iceCandidatePoolSize: 10
+    });
 
     // Initialize ICE candidate queue state for this connection
     pendingCandidates.set(pc, { remoteDescriptionSet: false, queue: [] });
@@ -43,7 +52,24 @@ export function createPeerConnection(localStream, onIceCandidate, onRemoteStream
 
     // Handle network candidate discovery
     pc.onicecandidate = (event) => {
-        if (event.candidate) onIceCandidate(event.candidate);
+        if (event.candidate) {
+            // Log candidate type to help diagnose relay gathering issues
+            console.log(`[ICE] New candidate type=${event.candidate.type} protocol=${event.candidate.protocol} address=${event.candidate.address}`);
+            onIceCandidate(event.candidate);
+        }
+    };
+
+    // Log ICE gathering state changes (helps detect 401 / relay failures)
+    pc.onicegatheringstatechange = () => {
+        console.log(`[ICE] Gathering state: ${pc.iceGatheringState}`);
+    };
+
+    // Log ICE connection state changes (checking -> connected / failed)
+    pc.oniceconnectionstatechange = () => {
+        console.log(`[ICE] Connection state: ${pc.iceConnectionState}`);
+        if (pc.iceConnectionState === 'failed') {
+            console.error('[ICE] Connection FAILED - no usable candidate path found.');
+        }
     };
 
     // Handle incoming remote video track
@@ -55,6 +81,7 @@ export function createPeerConnection(localStream, onIceCandidate, onRemoteStream
 
     return pc;
 }
+
 
 /**
  * 3. Creates WebRTC SDP Offer (Dialer)

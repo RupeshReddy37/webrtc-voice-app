@@ -13,7 +13,16 @@ export async function initLocalStream() {
 
 // Initialize RTCPeerConnection instance
 export function createPeerConnection(onIceCandidate, onTrack) {
-    peerConnection = new RTCPeerConnection(RTC_CONFIG);
+    // Explicit ICE configuration for reliable cross-network traversal.
+    // - iceTransportPolicy: 'all' allows host, srflx, AND relay candidates.
+    // - bundlePolicy: 'max-bundle' reduces transports to a single one.
+    // - iceCandidatePoolSize: pre-gathers candidates to speed up connection.
+    peerConnection = new RTCPeerConnection({
+        ...RTC_CONFIG,
+        iceTransportPolicy: 'all',
+        bundlePolicy: 'max-bundle',
+        iceCandidatePoolSize: 10
+    });
     remoteDescriptionSet = false;
     pendingIceCandidates = [];
 
@@ -25,7 +34,22 @@ export function createPeerConnection(onIceCandidate, onTrack) {
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+            // Log candidate type to help diagnose relay gathering issues
+            console.log(`[ICE] New candidate type=${event.candidate.type} protocol=${event.candidate.protocol} address=${event.candidate.address}`);
             onIceCandidate(event.candidate);
+        }
+    };
+
+    // Log ICE gathering state changes (helps detect 401 / relay failures)
+    peerConnection.onicegatheringstatechange = () => {
+        console.log(`[ICE] Gathering state: ${peerConnection.iceGatheringState}`);
+    };
+
+    // Log ICE connection state changes (checking -> connected / failed)
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log(`[ICE] Connection state: ${peerConnection.iceConnectionState}`);
+        if (peerConnection.iceConnectionState === 'failed') {
+            console.error('[ICE] Connection FAILED - no usable candidate path found.');
         }
     };
 
@@ -35,6 +59,7 @@ export function createPeerConnection(onIceCandidate, onTrack) {
 
     return peerConnection;
 }
+
 
 // Create WebRTC Offer (Dialer)
 export async function createOffer() {
