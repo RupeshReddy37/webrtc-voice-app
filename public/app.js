@@ -3,18 +3,30 @@
 // Vanilla JS + Socket.io
 
 // ============================================================
-// 4. METERED.CA TURN CONFIGURATION (exact, as specified)
+// 4. METERED.CA WATERFALL ICE CONFIGURATION
+// Provides STUN + multiple TURN fallbacks (UDP, TCP, TLS).
+// The WebRTC engine races all options and automatically selects
+// the TLS/TCP route (TURNS on port 443) when UDP is blocked by
+// strict NAT/firewalls. TURNS encrypts the DTLS handshake to
+// look like standard HTTPS traffic, bypassing the firewall.
 // ============================================================
 const rtcConfig = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:relay.metered.ca:80" },
         {
-            urls: "turn:global.relay.metered.ca:443?transport=tcp",
+            urls: [
+                "turn:global.relay.metered.ca:80",
+                "turn:global.relay.metered.ca:80?transport=tcp",
+                "turn:global.relay.metered.ca:443",
+                "turns:global.relay.metered.ca:443?transport=tcp"
+            ],
             username: "a759448519ca87baa4a012c3",
             credential: "H74evKOmY6AWXGOy",
         }
     ]
 };
+
 
 // ============================================================
 // Socket.io connection
