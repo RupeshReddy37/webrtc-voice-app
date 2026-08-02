@@ -123,26 +123,38 @@ socket.on('hangup', () => {
 
 // --- Call Logic ---
 async function startCall() {
+    // Guard against dialing while the WebSocket is disconnected
+    // (mobile browsers may drop the socket when the app is backgrounded)
+    if (!socket.connected) {
+        showToast('Connection lost. Reconnecting...', 'error');
+        return;
+    }
+    if (!currentRoom) {
+        showToast('Join a room first.', 'error');
+        return;
+    }
+
     setUIState('calling');
     const localStream = await WebRTC.initLocalStream();
     Visualizer.initVisualizer(localStream);
     setupPeer();
     const offer = await WebRTC.createOffer();
-    socket.emit('offer', { room: currentRoom, sdp: offer });
+    socket.emit('offer', { roomId: currentRoom, sdp: offer });
 }
+
 
 async function answerCall() {
     const localStream = await WebRTC.initLocalStream();
     Visualizer.initVisualizer(localStream);
     setupPeer();
     const answer = await WebRTC.handleOfferAndCreateAnswer(savedOffer);
-    socket.emit('answer', { room: currentRoom, sdp: answer });
+    socket.emit('answer', { roomId: currentRoom, sdp: answer });
     navigator.vibrate?.(100);
 }
 
 function setupPeer() {
     WebRTC.createPeerConnection(
-        (candidate) => socket.emit('ice-candidate', { room: currentRoom, candidate }),
+        (candidate) => socket.emit('ice-candidate', { roomId: currentRoom, candidate }),
         (stream) => {
             remoteAudio.srcObject = stream;
             setUIState('connected');
@@ -152,8 +164,9 @@ function setupPeer() {
 
 function hangupCall(emitEvent = true) {
     if (emitEvent && currentRoom) {
-        socket.emit('hangup', { room: currentRoom });
+        socket.emit('hangup', { roomId: currentRoom });
     }
+
     stopCallTimer();
     WebRTC.stopPeerConnection();
     Visualizer.stopVisualizer();

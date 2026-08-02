@@ -94,8 +94,20 @@ function handleRemoteStream(stream) {
 
 // Call Actions
 async function startCall() {
+    // Guard against dialing while the WebSocket is disconnected
+    // (mobile browsers may drop the socket when the app is backgrounded)
+    if (!socket.connected) {
+        alert('Connection lost. Please wait for reconnection.');
+        return;
+    }
+    if (!currentRoom) {
+        alert('Please join a room first.');
+        return;
+    }
+
     setUIState('calling');
     localStream = await WebRTCVideo.startCamera(localVideo);
+
 
     peerConnection = WebRTCVideo.createPeerConnection(
         localStream,

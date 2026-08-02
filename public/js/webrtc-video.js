@@ -2,6 +2,11 @@
 // Reusable WebRTC Video Module - single-responsibility helper functions
 import { RTC_CONFIG } from './config.js';
 
+// Track ICE candidate queueing state per peer connection.
+// ICE candidates arriving before setRemoteDescription must be queued,
+// otherwise addIceCandidate() throws and the connection fails.
+const pendingCandidates = new WeakMap();
+
 /**
  * 1. Captures local camera and microphone
  * @param {HTMLVideoElement} localVideoElement The video element to show the local preview.
@@ -27,6 +32,9 @@ export async function startCamera(localVideoElement) {
  */
 export function createPeerConnection(localStream, onIceCandidate, onRemoteStream) {
     const pc = new RTCPeerConnection(RTC_CONFIG);
+
+    // Initialize ICE candidate queue state for this connection
+    pendingCandidates.set(pc, { remoteDescriptionSet: false, queue: [] });
 
     // Attach local camera & audio tracks to peer connection
     if (localStream) {
@@ -67,6 +75,8 @@ export async function generateOffer(peerConnection) {
  */
 export async function generateAnswer(peerConnection, remoteOfferSdp) {
     await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteOfferSdp));
+    markRemoteDescriptionSet(peerConnection);
+    await flushPendingIceCandidates(peerConnection);
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
     return answer;
@@ -80,17 +90,55 @@ export async function generateAnswer(peerConnection, remoteOfferSdp) {
 export async function applyAnswer(peerConnection, remoteAnswerSdp) {
     if (peerConnection) {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteAnswerSdp));
+        markRemoteDescriptionSet(peerConnection);
+        await flushPendingIceCandidates(peerConnection);
     }
 }
 
 /**
- * 6. Adds ICE Candidate
+ * 6. Adds ICE Candidate (queued until remote description is set)
  * @param {RTCPeerConnection} peerConnection The active peer connection.
  * @param {RTCIceCandidate} candidate The received ICE candidate.
  */
 export async function applyIceCandidate(peerConnection, candidate) {
-    if (peerConnection) {
+    if (!peerConnection) return;
+
+    const state = pendingCandidates.get(peerConnection);
+    if (!state) {
+        // No state tracked (connection not created via this module) - add directly
         await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        return;
+    }
+
+    if (!state.remoteDescriptionSet) {
+        // Queue candidates that arrive before setRemoteDescription
+        state.queue.push(candidate);
+        return;
+    }
+
+    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+}
+
+// Mark that the remote description has been set for a connection
+function markRemoteDescriptionSet(peerConnection) {
+    const state = pendingCandidates.get(peerConnection);
+    if (state) {
+        state.remoteDescriptionSet = true;
+    }
+}
+
+// Flush any queued ICE candidates once remote description is ready
+async function flushPendingIceCandidates(peerConnection) {
+    const state = pendingCandidates.get(peerConnection);
+    if (!state) return;
+
+    while (state.queue.length > 0) {
+        const candidate = state.queue.shift();
+        try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+            console.warn('Failed to add queued ICE candidate:', err);
+        }
     }
 }
 
@@ -107,6 +155,7 @@ export function stopVideoCall(peerConnection, localStream, localVideoEl, remoteV
     }
     if (peerConnection) {
         peerConnection.close();
+        pendingCandidates.delete(peerConnection);
     }
     if (localVideoEl) localVideoEl.srcObject = null;
     if (remoteVideoEl) remoteVideoEl.srcObject = null;
