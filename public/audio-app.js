@@ -47,6 +47,9 @@ const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const avatar = document.getElementById('avatar');
 const callState = document.getElementById('callState');
+const videoToggle = document.getElementById('videoToggle');
+const chatToggle = document.getElementById('chatToggle');
+
 
 // ============================================================
 // State
@@ -378,3 +381,13 @@ endBtn.addEventListener('click', () => endCall(true));
 roomIdInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') joinRoom();
 });
+
+// Navigation Toggle
+videoToggle.addEventListener('click', () => {
+    window.location.href = 'video.html';
+});
+chatToggle.addEventListener('click', () => {
+    window.location.href = 'chat.html';
+});
+
+

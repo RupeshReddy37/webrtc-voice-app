@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Text Chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="card">
+        <!-- Navigation Toggle -->
+        <div class="nav-toggle">
+            <button class="toggle-btn" id="voiceToggle">🎧 Voice Call</button>
+            <button class="toggle-btn" id="videoToggle">📹 Video Call</button>
+            <button class="toggle-btn active" id="chatToggle">💬 Text Chat</button>
+        </div>
+
+        <!-- Chat Call Content -->
+        <h1>P2P Text Chat</h1>
+
+        <!-- Initial State: Room Join Controls -->
+        <div class="controls" id="joinControls">
+            <input type="text" id="roomIdInput" placeholder="Enter Room ID" autocomplete="off">
+            <button id="joinBtn">Join Room</button>
+        </div>
+
+        <!-- Status Text -->
+        <div class="status-text" id="statusText">🔴 Disconnected</div>
+
+        <!-- Active State: Chat UI (hidden until connected) -->
+        <div class="chat-ui hidden" id="chatUI">
+            <!-- Scrollable message history -->
+            <div class="chat-messages" id="chatMessages"></div>
+
+            <!-- Message input + Send button -->
+            <div class="chat-input-row">
+                <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off">
+                <button id="sendBtn">Send</button>
+            </div>
+
+            <!-- Leave Chat button -->
+            <button id="leaveBtn" class="leave-btn">Leave Chat</button>
+        </div>
+    </div>
+
+    <!-- Socket.io client library -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- P2P Text Chat WebRTC logic -->
+    <script src="js/chat-app.js"></script>
+</body>
+</html>

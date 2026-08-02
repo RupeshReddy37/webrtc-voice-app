@@ -209,3 +209,123 @@ input[type="text"]:focus {
         width: 35%;
     }
 }
+
+/* ============================================================
+   P2P TEXT CHAT UI (chat.html)
+   ============================================================ */
+.chat-ui {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Scrollable message history */
+.chat-messages {
+    height: 260px;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chat-message {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.msg-sender {
+    font-weight: 700;
+    color: #4fc3f7;
+}
+
+.msg-text {
+    color: #ffffff;
+}
+
+/* Message input + Send button row */
+.chat-input-row {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input-row input[type="text"] {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 1rem;
+    outline: none;
+}
+
+.chat-input-row input[type="text"]::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.chat-input-row input[type="text"]:focus {
+    border-color: #4fc3f7;
+}
+
+#sendBtn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: #4fc3f7;
+    color: #0f3460;
+    transition: transform 0.1s ease, opacity 0.2s ease;
+}
+
+#sendBtn:hover {
+    transform: translateY(-2px);
+}
+
+/* Leave Chat button */
+.leave-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: #ef5350;
+    color: #ffffff;
+    transition: transform 0.1s ease, opacity 0.2s ease;
+}
+
+.leave-btn:hover {
+    transform: translateY(-2px);
+}
+
+/* Custom scrollbar for the message history */
+.chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+

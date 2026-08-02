@@ -40,6 +40,8 @@ const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
 const voiceToggle = document.getElementById('voiceToggle');
 const videoToggle = document.getElementById('videoToggle');
+const chatToggle = document.getElementById('chatToggle');
+
 
 // ============================================================
 // State
@@ -412,3 +414,8 @@ roomIdInput.addEventListener('keydown', (e) => {
 voiceToggle.addEventListener('click', () => {
     window.location.href = 'index.html';
 });
+chatToggle.addEventListener('click', () => {
+    window.location.href = 'chat.html';
+});
+
+

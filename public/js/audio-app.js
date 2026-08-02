@@ -38,6 +38,8 @@ const dialBtn = document.getElementById('dialBtn');
 const statusText = document.getElementById('statusText');
 const voiceToggle = document.getElementById('voiceToggle');
 const videoToggle = document.getElementById('videoToggle');
+const chatToggle = document.getElementById('chatToggle');
+
 
 // ============================================================
 // State
@@ -353,3 +355,8 @@ roomIdInput.addEventListener('keydown', (e) => {
 videoToggle.addEventListener('click', () => {
     window.location.href = 'video.html';
 });
+chatToggle.addEventListener('click', () => {
+    window.location.href = 'chat.html';
+});
+
+
