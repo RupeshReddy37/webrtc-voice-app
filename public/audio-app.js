@@ -5,27 +5,21 @@
 // TURNS waterfall configuration as the video app.
 
 // ============================================================
-// METERED.CA WATERFALL ICE CONFIGURATION
-// Each TURN URL is a SEPARATE object. This forces the WebRTC
-// engine to evaluate TCP and TLS independently if UDP fails.
+// ICE CONFIGURATION (Oracle Cloud Coturn TURN server)
 // ============================================================
 const rtcConfig = {
     iceServers: [
+        // Public STUN backup (Google) + self-hosted STUN (Oracle Cloud)
         { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:144.24.153.201:3478" },
         {
-            urls: "turn:global.relay.metered.ca:80",
-            username: "a759448519ca87baa4a012c3",
-            credential: "H74evKOmY6AWXGOy"
-        },
-        {
-            urls: "turn:global.relay.metered.ca:443?transport=tcp",
-            username: "a759448519ca87baa4a012c3",
-            credential: "H74evKOmY6AWXGOy"
-        },
-        {
-            urls: "turns:global.relay.metered.ca:443?transport=tcp",
-            username: "a759448519ca87baa4a012c3",
-            credential: "H74evKOmY6AWXGOy"
+            // Self-hosted Coturn TURN server (Oracle Cloud)
+            urls: [
+                "turn:144.24.153.201:3478?transport=udp",
+                "turn:144.24.153.201:3478?transport=tcp"
+            ],
+            username: "turn0581d5",
+            credential: "BZ27wcunTq7JtwcDIPyggWN"
         }
     ]
 };

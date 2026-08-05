@@ -8,21 +8,21 @@
 // setup, and strict reset logic.
 
 // ============================================================
-// WATERFALL ICE CONFIGURATION (Metered.ca)
+// ICE CONFIGURATION (Oracle Cloud Coturn TURN server)
 // ============================================================
 const rtcConfig = {
     iceServers: [
+        // Public STUN backup (Google) + self-hosted STUN (Oracle Cloud)
         { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:relay.metered.ca:80" },
+        { urls: "stun:144.24.153.201:3478" },
         {
+            // Self-hosted Coturn TURN server (Oracle Cloud)
             urls: [
-                "turn:global.relay.metered.ca:80",
-                "turn:global.relay.metered.ca:80?transport=tcp",
-                "turn:global.relay.metered.ca:443",
-                "turns:global.relay.metered.ca:443?transport=tcp"
+                "turn:144.24.153.201:3478?transport=udp",
+                "turn:144.24.153.201:3478?transport=tcp"
             ],
-            username: "a759448519ca87baa4a012c3",
-            credential: "H74evKOmY6AWXGOy",
+            username: "turn0581d5",
+            credential: "BZ27wcunTq7JtwcDIPyggWN"
         }
     ]
 };
