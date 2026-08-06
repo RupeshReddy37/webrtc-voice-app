@@ -1,14 +1,14 @@
-# ARV — Audio or Video
+# Verge — Audio or Video
 
 A modern, full-screen, responsive **React + Vite** WebRTC application for
-1-on-1 **voice calls**, **video calls**, and **text chat** over the same
-signaling server.
+high-definition 1-on-1 **voice calls**, **video calls**, and **encrypted text
+chat** — peer-to-peer, with no data stored on servers.
 
 ## Pages
 
 | Route | Page |
 | ----- | ---- |
-| `/#/` | Home dashboard (ARV branding + launch cards) |
+| `/#/` | Home dashboard (Verge branding + launch cards) |
 | `/#/audio` | Audio-only call with live waveform visualizer |
 | `/#/video` | Widescreen video stage, floating 16:9 self-view PiP, floating control bar |
 | `/#/chat` | Peer-to-peer text chat over a WebRTC data channel |

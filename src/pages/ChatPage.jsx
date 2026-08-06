@@ -3,6 +3,7 @@
 // code state and a scrollable message feed.
 import { useEffect, useRef, useState } from 'react';
 import { useChat } from '../hooks/useChat';
+import { ChatIcon, SendIcon, LogOutIcon, NetworkIcon } from '../components/icons';
 
 export default function ChatPage() {
   const [roomInput, setRoomInput] = useState('');
@@ -39,7 +40,9 @@ export default function ChatPage() {
   return (
     <section className="page chat-page">
       <header className="chat-head">
-        <h2 className="chat-title">💬 Text Chat</h2>
+        <h2 className="chat-title">
+          <ChatIcon className="icon" /> Text Chat
+        </h2>
         {joined && <span className="room-badge">Room {roomCode}</span>}
         <span className={`status-pill${connected ? ' live' : ''}`}>
           {socketConnected ? status : 'Connecting to server...'}
@@ -48,11 +51,11 @@ export default function ChatPage() {
           <>
             {!connected && (
               <button className="btn connect" onClick={connectChat} type="button">
-                🔗 Connect Chat
+                <NetworkIcon className="icon" /> Connect Chat
               </button>
             )}
             <button className="btn ghost small" onClick={leaveChat} type="button">
-              Leave
+              <LogOutIcon className="icon" /> Leave
             </button>
           </>
         )}
@@ -117,7 +120,7 @@ export default function ChatPage() {
               disabled={!connected}
             />
             <button className="btn" type="submit" disabled={!connected || !draft.trim()}>
-              Send
+              <SendIcon className="icon" /> Send
             </button>
           </form>
         </>
@@ -125,3 +128,4 @@ export default function ChatPage() {
     </section>
   );
 }
+

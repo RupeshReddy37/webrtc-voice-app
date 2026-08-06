@@ -5,6 +5,16 @@
 // floats at the bottom center.
 import { useEffect, useRef, useState } from 'react';
 import { useVideoCall } from '../hooks/useVideoCall';
+import {
+  MicIcon,
+  MicOffIcon,
+  CameraIcon,
+  CameraOffIcon,
+  PhoneOffIcon,
+  CheckIcon,
+  XIcon,
+  LogOutIcon,
+} from '../components/icons';
 
 export default function VideoPage() {
   const [roomInput, setRoomInput] = useState('');
@@ -79,7 +89,9 @@ export default function VideoPage() {
       {/* Room badge */}
       {phase !== 'idle' && (
         <div className="stage-topbar">
-          <span className="room-badge">📹 Room {roomCode}</span>
+          <span className="room-badge">
+            <CameraIcon className="icon" /> Room {roomCode}
+          </span>
         </div>
       )}
 
@@ -96,7 +108,7 @@ export default function VideoPage() {
               joinRoom(roomInput);
             }}
           >
-            <h2>📹 Start a Video Call</h2>
+            <h2>Start a Video Call</h2>
             <p>Enter a room code — the person you call enters the same code.</p>
             <input
               className="input"
@@ -123,7 +135,7 @@ export default function VideoPage() {
             </span>
             {phase === 'ready' && (
               <button className="btn" onClick={startCall} type="button">
-                📹 Start Video Call
+                Start Video Call
               </button>
             )}
             <button className="btn ghost" onClick={leaveRoom} type="button">
@@ -138,15 +150,17 @@ export default function VideoPage() {
       {phase === 'incoming' && (
         <div className="call-overlay">
           <div className="call-card">
-            <div className="avatar ringing">📹</div>
+            <div className="avatar ringing">
+              <CameraIcon className="icon" />
+            </div>
             <h2>Incoming Video Call</h2>
             <p className="call-room">Room {roomCode}</p>
             <div className="call-row">
               <button className="btn danger" onClick={declineCall} type="button">
-                ✕ Decline
+                <XIcon className="icon" /> Decline
               </button>
-              <button className="btn" onClick={answerCall} type="button">
-                ✓ Answer
+              <button className="btn success" onClick={answerCall} type="button">
+                <CheckIcon className="icon" /> Answer
               </button>
             </div>
           </div>
@@ -162,7 +176,7 @@ export default function VideoPage() {
             type="button"
             title={muted ? 'Unmute' : 'Mute'}
           >
-            {muted ? '🔇' : '🎙️'}
+            {muted ? <MicOffIcon className="icon" /> : <MicIcon className="icon" />}
           </button>
           <button
             className={`ctl-btn${cameraOn ? '' : ' off'}`}
@@ -170,10 +184,10 @@ export default function VideoPage() {
             type="button"
             title={cameraOn ? 'Turn camera off' : 'Turn camera on'}
           >
-            {cameraOn ? '📹' : '🚫'}
+            {cameraOn ? <CameraIcon className="icon" /> : <CameraOffIcon className="icon" />}
           </button>
           <button className="ctl-btn end" onClick={endCall} type="button" title="End call">
-            📵
+            <PhoneOffIcon className="icon" />
           </button>
         </div>
       )}

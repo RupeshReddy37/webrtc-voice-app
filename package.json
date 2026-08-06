@@ -1,7 +1,7 @@
 {
-  "name": "arv",
+  "name": "verge",
   "version": "2.0.0",
-  "description": "ARV - Audio or Video. Modern full-screen React + Vite WebRTC app for 1-on-1 voice, video, and text chat.",
+  "description": "Verge - Audio or Video. Modern full-screen React + Vite WebRTC app for high-definition 1-on-1 voice, video, and encrypted text chat.",
   "main": "server.js",
   "scripts": {
     "dev": "concurrently -k -n server,vite -c blue,magenta \"node server.js\" \"vite\"",

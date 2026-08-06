@@ -1,9 +1,18 @@
 // src/pages/AudioPage.jsx
 // Dedicated full-screen audio-only call page with its own isolated
-// audio room code state and live waveform visualizer.
+// audio room code state and a live waveform visualizer.
 import { useEffect, useRef, useState } from 'react';
 import { useAudioCall } from '../hooks/useAudioCall';
 import AudioVisualizer from '../components/AudioVisualizer';
+import {
+  MicIcon,
+  MicOffIcon,
+  PhoneIcon,
+  PhoneOffIcon,
+  CheckIcon,
+  XIcon,
+  LogOutIcon,
+} from '../components/icons';
 
 // Tiny helper: attaches a remote MediaStream to an <audio> element.
 function RemoteAudio({ stream }) {
@@ -47,15 +56,17 @@ export default function AudioPage() {
       {phase === 'incoming' && (
         <div className="call-overlay">
           <div className="call-card">
-            <div className="avatar ringing">🎙️</div>
+            <div className="avatar ringing">
+              <MicIcon className="icon" />
+            </div>
             <h2>Incoming Audio Call</h2>
             <p className="call-room">Room {roomCode}</p>
             <div className="call-row">
               <button className="btn danger" onClick={declineCall} type="button">
-                ✕ Decline
+                <XIcon className="icon" /> Decline
               </button>
-              <button className="btn" onClick={answerCall} type="button">
-                ✓ Answer
+              <button className="btn success" onClick={answerCall} type="button">
+                <CheckIcon className="icon" /> Answer
               </button>
             </div>
           </div>
@@ -63,7 +74,9 @@ export default function AudioPage() {
       )}
 
       <div className="audio-center">
-        <div className={`avatar${active ? ' live' : ''}`}>🎙️</div>
+        <div className={`avatar${active ? ' live' : ''}`}>
+          <MicIcon className="icon" />
+        </div>
 
         <div className="visualizer-wrap">
           <AudioVisualizer stream={localStream} active={active} />
@@ -102,14 +115,16 @@ export default function AudioPage() {
         {/* Waiting / ready */}
         {(phase === 'waiting' || phase === 'ready') && (
           <div className="room-form">
-            <span className="room-badge">🎙️ Room {roomCode}</span>
+            <span className="room-badge">
+              <MicIcon className="icon" /> Room {roomCode}
+            </span>
             {phase === 'ready' && (
               <button className="btn" onClick={startCall} type="button">
-                📞 Dial Call
+                <PhoneIcon className="icon" /> Dial Call
               </button>
             )}
             <button className="btn ghost" onClick={leaveRoom} type="button">
-              Leave
+              <LogOutIcon className="icon" /> Leave
             </button>
           </div>
         )}
@@ -117,9 +132,11 @@ export default function AudioPage() {
         {/* Calling */}
         {phase === 'calling' && (
           <div className="room-form">
-            <span className="status-pill">📞 Calling...</span>
+            <span className="status-pill">
+              <PhoneIcon className="icon" /> Calling...
+            </span>
             <button className="btn danger" onClick={endCall} type="button">
-              End
+              <PhoneOffIcon className="icon" /> End
             </button>
           </div>
         )}
@@ -133,10 +150,10 @@ export default function AudioPage() {
               type="button"
               title={muted ? 'Unmute' : 'Mute'}
             >
-              {muted ? '🔇' : '🎙️'}
+              {muted ? <MicOffIcon className="icon" /> : <MicIcon className="icon" />}
             </button>
             <button className="ctl-btn end" onClick={endCall} type="button" title="End call">
-              📵
+              <PhoneOffIcon className="icon" />
             </button>
           </div>
         )}
@@ -146,3 +163,4 @@ export default function AudioPage() {
     </section>
   );
 }
+

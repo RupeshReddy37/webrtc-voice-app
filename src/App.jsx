@@ -1,5 +1,5 @@
 // src/App.jsx
-// ARV (Audio or Video) - routing + fixed top-nav layout.
+// Verge (Audio or Video) - routing + fixed top-nav layout + footer.
 //
 // HashRouter is used deliberately: server.js is a static-only Socket.io
 // server (express.static('public')) with no SPA fallback route, and it is
@@ -7,6 +7,7 @@
 // every route work on refresh and deep-link without any server changes.
 import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import TopNavbar from './components/TopNavbar';
+import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import AudioPage from './pages/AudioPage';
 import VideoPage from './pages/VideoPage';
@@ -19,6 +20,7 @@ function Layout() {
       <main className="main">
         <Outlet />
       </main>
+      <Footer />
     </div>
   );
 }

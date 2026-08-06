@@ -1,5 +1,5 @@
 // server.js
-// Express/Socket.io signaling server for ARV (Audio or Video).
+// Express/Socket.io signaling server for Verge (Audio or Video).
 //  - Serves the built React frontend (Vite build.outDir = "public")
 //  - Handles WebRTC signaling (join, offer, answer, ice-candidate)
 //    with a strict 2-user room capacity.

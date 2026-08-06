@@ -119,7 +119,7 @@ export function useAudioCall() {
       console.log(`[ICE] Connection state: ${pc.iceConnectionState}`);
       if (pc.iceConnectionState === 'connected') {
         setPhase('in-call');
-        setStatus('🟢 Connected');
+        setStatus('Connected');
       }
       if (
         pc.iceConnectionState === 'disconnected' ||
@@ -146,7 +146,7 @@ export function useAudioCall() {
     setPhase(peerJoinedRef.current ? 'ready' : 'waiting');
     setStatus(
       peerJoinedRef.current
-        ? '🟢 Peer joined room. Ready to call.'
+        ? 'Peer joined room. Ready to call.'
         : 'Waiting for a peer to join the room...'
     );
   }, [setPhase]);
@@ -192,7 +192,7 @@ export function useAudioCall() {
     }
 
     setPhase('calling');
-    setStatus('📞 Calling...');
+    setStatus('Calling...');
 
     try {
       // STEP 1: Await getUserMedia (audio only)
@@ -241,7 +241,7 @@ export function useAudioCall() {
     }
 
     setPhase('calling');
-    setStatus('📞 Connecting...');
+    setStatus('Connecting...');
 
     try {
       // STEP 1: Await getUserMedia (audio only)
@@ -360,7 +360,7 @@ export function useAudioCall() {
 
     socket.on('peer-joined', () => {
       peerJoinedRef.current = true;
-      setStatus('🟢 Peer joined room. Ready to call.');
+      setStatus('Peer joined room. Ready to call.');
       if (phaseRef.current === 'waiting') setPhase('ready');
     });
 
@@ -402,7 +402,7 @@ export function useAudioCall() {
       // Brand-new incoming call
       incomingOfferRef.current = data.sdp;
       setPhase('incoming');
-      setStatus('📞 Incoming call...');
+      setStatus('Incoming call...');
     });
 
     socket.on('answer', async (data) => {

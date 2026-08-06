@@ -40,7 +40,7 @@ export function useChat() {
       channel.onopen = () => {
         console.log('💬 Data channel open.');
         setConnected(true);
-        setStatus('🟢 Chat connected - type a message!');
+        setStatus('Chat connected - type a message!');
       };
 
       channel.onclose = () => {
@@ -193,7 +193,7 @@ export function useChat() {
       return;
     }
 
-    setStatus('📤 Connecting chat...');
+    setStatus('Connecting chat...');
 
     // STEP 1: Initialize RTCPeerConnection (NO media)
     const pc = createPeerConnection();
@@ -267,7 +267,7 @@ export function useChat() {
     });
 
     socket.on('peer-joined', () => {
-      setStatus('🟢 Peer joined room. Press Connect Chat to start.');
+      setStatus('Peer joined room. Press Connect Chat to start.');
     });
 
     socket.on('peer-left', () => {
@@ -304,7 +304,7 @@ export function useChat() {
 
       // Act as the Callee - listen for the incoming data channel
       incomingOfferRef.current = data.sdp;
-      setStatus('📥 Incoming chat connection...');
+      setStatus('Incoming chat connection...');
 
       const pc = createPeerConnection();
       try {

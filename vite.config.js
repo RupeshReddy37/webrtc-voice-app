@@ -1,5 +1,5 @@
 // vite.config.js
-// ARV (Audio or Video) - React + Vite client for the existing Socket.io server.
+// Verge (Audio or Video) - React + Vite client for the existing Socket.io server.
 //
 // IMPORTANT: server.js is intentionally untouched. It does
 //   app.use(express.static('public'))
