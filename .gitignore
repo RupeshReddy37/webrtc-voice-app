@@ -1,4 +1,9 @@
 /node_modules
-.env
+/.env
 *.key
 app.tar.gz
+
+# Vite build output (written into the express-served public/ folder)
+/public/assets/
+/public/index.html
+
