@@ -7,12 +7,12 @@ export default function Footer() {
   return (
     <footer className="footer">
       <span className="footer-brand">
-        © 2026 Verge. Engineered for high-performance communication.
+        © 2026 Verge.
       </span>
 
       <div className="footer-meta">
         <span className="footer-credit">
-          Crafted by <strong>Lomada Rupesh Reddy</strong>
+          Developed by <strong>Rupesh Reddy Lomada</strong>
         </span>
         <a
           className="footer-link"
@@ -24,13 +24,13 @@ export default function Footer() {
         </a>
         <a
           className="footer-link"
-          href="https://github.com/RupeshReddy37"
+          href="https://rupeshreddy.vercel.app/"
           target="_blank"
           rel="noopener noreferrer"
           title="Open portfolio"
         >
           <GlobeIcon className="icon" />
-          Java Backend Developer Portfolio
+          Portfolio
         </a>
       </div>
     </footer>
