@@ -105,26 +105,31 @@ input {
 .video-grid {
     position: relative;
     width: 100%;
-    height: 240px;
+    aspect-ratio: 16 / 9; /* widescreen video-call frame */
     background: #000;
     border-radius: 12px;
-    overflow: hidden;
+    overflow: hidden; /* keep cover-cropped edges clipped inside the rounded frame */
     margin-bottom: 20px;
 }
 
 .remote-video {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
 }
 
 .local-video {
     position: absolute;
     bottom: 12px;
     right: 12px;
-    width: 80px;
-    height: 110px;
+    display: block;
+    width: 30%;
+    max-width: 160px;
+    aspect-ratio: 16 / 9;
     object-fit: cover;
+    object-position: center;
     border-radius: 8px;
     border: 2px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
