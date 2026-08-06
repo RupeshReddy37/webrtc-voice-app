@@ -3,7 +3,7 @@
 // public/js/visualizer.js. Renders the live microphone spectrum.
 import { useEffect, useRef } from 'react';
 
-export default function AudioVisualizer({ stream, active = true, barColor = '#38bdf8', accentColor = '#818cf8' }) {
+export default function AudioVisualizer({ stream, active = true, barColor = '#38bdf8', accentColor = '#0ea5e9' }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
 

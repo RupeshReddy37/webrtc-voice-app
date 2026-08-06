@@ -1,14 +1,19 @@
 // src/components/Footer.jsx
-// Professional bottom-anchored footer shown on every page.
+// Redesigned professional footer - bottom anchored on every page.
+// Balanced two-column layout: brand tagline left, credit + links right.
 import { MailIcon, GlobeIcon } from './icons';
 
 export default function Footer() {
   return (
     <footer className="footer">
-      <span className="footer-note">
-        Crafted by <strong>Lomada Rupesh Reddy</strong>
+      <span className="footer-brand">
+        © 2026 Verge. Engineered for high-performance communication.
       </span>
-      <div className="footer-links">
+
+      <div className="footer-meta">
+        <span className="footer-credit">
+          Crafted by <strong>Lomada Rupesh Reddy</strong>
+        </span>
         <a
           className="footer-link"
           href="mailto:rupeshreddylomada@gmail.com"
@@ -25,9 +30,10 @@ export default function Footer() {
           title="Open portfolio"
         >
           <GlobeIcon className="icon" />
-          Lomada Rupesh Reddy | Java Backend Developer Portfolio
+          Java Backend Developer Portfolio
         </a>
       </div>
     </footer>
   );
 }
+
