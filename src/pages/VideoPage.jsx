@@ -58,7 +58,22 @@ export default function VideoPage() {
   return (
     <section className="page video-page">
       {/* Remote video fills the entire stage */}
-      <video ref={remoteRef} className="remote-stage" autoPlay playsInline />
+      <video
+        ref={remoteRef}
+        className="remote-stage"
+        autoPlay
+        playsInline
+        onLoadedMetadata={() => {
+          // Log the rendered display size (clientWidth/clientHeight) and the
+          // actual source resolution (videoWidth/videoHeight) as soon as the
+          // remote video metadata loads.
+          const el = remoteRef.current;
+          if (!el) return;
+          console.log(
+            `[RemoteVideo] Metadata loaded - display ${el.clientWidth}x${el.clientHeight}px | source ${el.videoWidth}x${el.videoHeight}px`
+          );
+        }}
+      />
       <div className="stage-vignette" aria-hidden="true" />
 
       {/* Room badge */}
