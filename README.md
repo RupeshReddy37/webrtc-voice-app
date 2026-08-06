@@ -13,9 +13,9 @@ signaling server.
 | `/#/video` | Widescreen video stage, floating 16:9 self-view PiP, floating control bar |
 | `/#/chat` | Peer-to-peer text chat over a WebRTC data channel |
 
-> Hash-based routing is used on purpose: the backend (`server.js`) is a
-> static-only Socket.io server, so `#/...` URLs work on refresh and
-> deep-links with zero server changes.
+> Hash-based routing is used so the SPA works on any static host, and
+> `server.js` also includes an SPA catch-all (`app.get('*')` -> index.html)
+> for deep links and future path-based routing.
 
 ## Getting started
 
@@ -31,8 +31,11 @@ same room code on the same page to connect.
 
 ## Architecture
 
-- **`server.js`** — untouched Express + Socket.io signaling server
+- **`server.js`** — Express + Socket.io signaling server
   (join / offer / answer / ice-candidate / hangup, 2-user room capacity).
+  Serves the built frontend from `public/`, falls back to `index.html` for
+  any non-file route (SPA catch-all), and auto-runs `npm run build` at
+  startup if the frontend has not been built yet.
 - **`src/`** — React client.
   - `pages/` — `HomePage`, `AudioPage`, `VideoPage`, `ChatPage`.
   - `hooks/` — `useAudioCall`, `useVideoCall`, `useChat` (WebRTC + socket
